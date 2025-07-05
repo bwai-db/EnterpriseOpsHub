@@ -1,0 +1,151 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Truck, Package, Globe, Factory } from "lucide-react";
+import type { Brand } from "@/lib/types";
+
+interface SupplyChainProps {
+  selectedBrand: Brand;
+}
+
+export default function SupplyChain({ selectedBrand }: SupplyChainProps) {
+  return (
+    <div className="p-6">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-ms-text">Supply Chain Management</h2>
+        <p className="text-gray-600 mt-2">
+          Manage distribution centers, PLC/3PL stacks, and global manufacturing logistics
+        </p>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Distribution Centers</p>
+                <p className="text-2xl font-bold text-ms-text">15</p>
+              </div>
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Package className="text-ms-blue w-6 h-6" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Active Shipments</p>
+                <p className="text-2xl font-bold text-ms-text">247</p>
+              </div>
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <Truck className="text-ms-green w-6 h-6" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Manufacturing Sites</p>
+                <p className="text-2xl font-bold text-ms-text">8</p>
+              </div>
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <Factory className="text-ms-orange w-6 h-6" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Global Reach</p>
+                <p className="text-2xl font-bold text-ms-text">35</p>
+              </div>
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                <Globe className="text-purple-600 w-6 h-6" />
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">Countries</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Brand-specific Content */}
+      {selectedBrand !== "all" && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="capitalize">{selectedBrand} Supply Chain Overview</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8 text-gray-500">
+              <Factory className="mx-auto w-12 h-12 mb-4 text-gray-300" />
+              <p>Brand-specific supply chain data for {selectedBrand}</p>
+              <p className="text-sm">Manufacturing and logistics details coming soon</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Supply Chain Modules */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Distribution Centers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8 text-gray-500">
+              <Package className="mx-auto w-12 h-12 mb-4 text-gray-300" />
+              <p>Distribution center management coming soon</p>
+              <p className="text-sm">Track warehouse operations and inventory</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Manufacturing Logistics</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8 text-gray-500">
+              <Factory className="mx-auto w-12 h-12 mb-4 text-gray-300" />
+              <p>Global manufacturing coordination</p>
+              <p className="text-sm">From design to delivery across all brands</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>PLC/3PL Integration</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8 text-gray-500">
+              <Truck className="mx-auto w-12 h-12 mb-4 text-gray-300" />
+              <p>Third-party logistics management</p>
+              <p className="text-sm">Integrate with external logistics providers</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Shipment Tracking</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8 text-gray-500">
+              <Globe className="mx-auto w-12 h-12 mb-4 text-gray-300" />
+              <p>Real-time shipment monitoring</p>
+              <p className="text-sm">Track deliveries worldwide</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
