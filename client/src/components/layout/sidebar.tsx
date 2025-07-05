@@ -10,7 +10,8 @@ import {
   Shield, 
   Users,
   UserCheck,
-  ShoppingBag
+  ShoppingBag,
+  Database
 } from "lucide-react";
 
 const navigation = [
@@ -19,6 +20,7 @@ const navigation = [
   { name: "Licensing", href: "/licensing", icon: Tag },
   { name: "Cloud Services", href: "/cloud-services", icon: Cloud },
   { name: "ITIL Management", href: "/itil", icon: Ticket },
+  { name: "Service Management", href: "/service-management", icon: Database },
   { name: "Supply Chain", href: "/supply-chain", icon: Truck },
   { name: "Security & Compliance", href: "/security", icon: Shield },
   { name: "People & Organization", href: "/people", icon: UserCheck },

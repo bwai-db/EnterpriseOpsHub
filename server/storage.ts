@@ -2,6 +2,8 @@ import {
   users, vendors, licenses, incidents, cloudServices,
   divisions, departments, functions, personas,
   stores, storeInventory, storeSales, storeStaff,
+  serviceCategories, itilServices, configurationItems,
+  serviceRelationships, ciRelationships, changeRequests, serviceLevelAgreements,
   type User, type InsertUser,
   type Vendor, type InsertVendor,
   type License, type InsertLicense,
@@ -14,7 +16,14 @@ import {
   type Store, type InsertStore,
   type StoreInventory, type InsertStoreInventory,
   type StoreSales, type InsertStoreSales,
-  type StoreStaff, type InsertStoreStaff
+  type StoreStaff, type InsertStoreStaff,
+  type ServiceCategory, type InsertServiceCategory,
+  type ItilService, type InsertItilService,
+  type ConfigurationItem, type InsertConfigurationItem,
+  type ServiceRelationship, type InsertServiceRelationship,
+  type CiRelationship, type InsertCiRelationship,
+  type ChangeRequest, type InsertChangeRequest,
+  type ServiceLevelAgreement, type InsertServiceLevelAgreement
 } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -104,6 +113,46 @@ export interface IStorage {
   createStaffMember(staff: InsertStoreStaff): Promise<StoreStaff>;
   updateStaffMember(id: number, staff: Partial<InsertStoreStaff>): Promise<StoreStaff>;
   deleteStaffMember(id: number): Promise<boolean>;
+
+  // ITIL Service Management and CMDB
+  getServiceCategories(brand?: string): Promise<ServiceCategory[]>;
+  getServiceCategory(id: number): Promise<ServiceCategory | undefined>;
+  createServiceCategory(category: InsertServiceCategory): Promise<ServiceCategory>;
+  updateServiceCategory(id: number, category: Partial<InsertServiceCategory>): Promise<ServiceCategory>;
+  deleteServiceCategory(id: number): Promise<boolean>;
+
+  getItilServices(brand?: string, categoryId?: number): Promise<ItilService[]>;
+  getItilService(id: number): Promise<ItilService | undefined>;
+  createItilService(service: InsertItilService): Promise<ItilService>;
+  updateItilService(id: number, service: Partial<InsertItilService>): Promise<ItilService>;
+  deleteItilService(id: number): Promise<boolean>;
+
+  getConfigurationItems(brand?: string, serviceId?: number, ciClass?: string): Promise<ConfigurationItem[]>;
+  getConfigurationItem(id: number): Promise<ConfigurationItem | undefined>;
+  createConfigurationItem(ci: InsertConfigurationItem): Promise<ConfigurationItem>;
+  updateConfigurationItem(id: number, ci: Partial<InsertConfigurationItem>): Promise<ConfigurationItem>;
+  deleteConfigurationItem(id: number): Promise<boolean>;
+  syncConfigurationItems(ciClass: string, brand?: string): Promise<ConfigurationItem[]>;
+
+  getServiceRelationships(serviceId?: number): Promise<ServiceRelationship[]>;
+  createServiceRelationship(relationship: InsertServiceRelationship): Promise<ServiceRelationship>;
+  deleteServiceRelationship(id: number): Promise<boolean>;
+
+  getCiRelationships(ciId?: number): Promise<CiRelationship[]>;
+  createCiRelationship(relationship: InsertCiRelationship): Promise<CiRelationship>;
+  deleteCiRelationship(id: number): Promise<boolean>;
+
+  getChangeRequests(brand?: string, status?: string): Promise<ChangeRequest[]>;
+  getChangeRequest(id: number): Promise<ChangeRequest | undefined>;
+  createChangeRequest(change: InsertChangeRequest): Promise<ChangeRequest>;
+  updateChangeRequest(id: number, change: Partial<InsertChangeRequest>): Promise<ChangeRequest>;
+  deleteChangeRequest(id: number): Promise<boolean>;
+
+  getServiceLevelAgreements(serviceId?: number): Promise<ServiceLevelAgreement[]>;
+  getServiceLevelAgreement(id: number): Promise<ServiceLevelAgreement | undefined>;
+  createServiceLevelAgreement(sla: InsertServiceLevelAgreement): Promise<ServiceLevelAgreement>;
+  updateServiceLevelAgreement(id: number, sla: Partial<InsertServiceLevelAgreement>): Promise<ServiceLevelAgreement>;
+  deleteServiceLevelAgreement(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -588,6 +637,255 @@ export class DatabaseStorage implements IStorage {
 
   async deleteStaffMember(id: number): Promise<boolean> {
     const result = await db.delete(storeStaff).where(eq(storeStaff.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // ITIL Service Management and CMDB Methods
+  async getServiceCategories(brand?: string): Promise<ServiceCategory[]> {
+    if (brand && brand !== "all") {
+      return await db.select().from(serviceCategories).where(eq(serviceCategories.brand, brand));
+    }
+    return await db.select().from(serviceCategories);
+  }
+
+  async getServiceCategory(id: number): Promise<ServiceCategory | undefined> {
+    const [category] = await db.select().from(serviceCategories).where(eq(serviceCategories.id, id));
+    return category || undefined;
+  }
+
+  async createServiceCategory(insertCategory: InsertServiceCategory): Promise<ServiceCategory> {
+    const [category] = await db
+      .insert(serviceCategories)
+      .values(insertCategory)
+      .returning();
+    return category;
+  }
+
+  async updateServiceCategory(id: number, updateData: Partial<InsertServiceCategory>): Promise<ServiceCategory> {
+    const [category] = await db
+      .update(serviceCategories)
+      .set(updateData)
+      .where(eq(serviceCategories.id, id))
+      .returning();
+    return category;
+  }
+
+  async deleteServiceCategory(id: number): Promise<boolean> {
+    const result = await db.delete(serviceCategories).where(eq(serviceCategories.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async getItilServices(brand?: string, categoryId?: number): Promise<ItilService[]> {
+    if (categoryId) {
+      return await db.select().from(itilServices).where(eq(itilServices.categoryId, categoryId));
+    } else if (brand && brand !== "all") {
+      return await db.select().from(itilServices).where(eq(itilServices.brand, brand));
+    }
+    
+    return await db.select().from(itilServices);
+  }
+
+  async getItilService(id: number): Promise<ItilService | undefined> {
+    const [service] = await db.select().from(itilServices).where(eq(itilServices.id, id));
+    return service || undefined;
+  }
+
+  async createItilService(insertService: InsertItilService): Promise<ItilService> {
+    const [service] = await db
+      .insert(itilServices)
+      .values(insertService)
+      .returning();
+    return service;
+  }
+
+  async updateItilService(id: number, updateData: Partial<InsertItilService>): Promise<ItilService> {
+    const [service] = await db
+      .update(itilServices)
+      .set(updateData)
+      .where(eq(itilServices.id, id))
+      .returning();
+    return service;
+  }
+
+  async deleteItilService(id: number): Promise<boolean> {
+    const result = await db.delete(itilServices).where(eq(itilServices.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async getConfigurationItems(brand?: string, serviceId?: number, ciClass?: string): Promise<ConfigurationItem[]> {
+    if (serviceId) {
+      return await db.select().from(configurationItems).where(eq(configurationItems.serviceId, serviceId));
+    } else if (ciClass) {
+      return await db.select().from(configurationItems).where(eq(configurationItems.ciClass, ciClass));
+    } else if (brand && brand !== "all") {
+      return await db.select().from(configurationItems).where(eq(configurationItems.brand, brand));
+    }
+    
+    return await db.select().from(configurationItems);
+  }
+
+  async getConfigurationItem(id: number): Promise<ConfigurationItem | undefined> {
+    const [ci] = await db.select().from(configurationItems).where(eq(configurationItems.id, id));
+    return ci || undefined;
+  }
+
+  async createConfigurationItem(insertCi: InsertConfigurationItem): Promise<ConfigurationItem> {
+    const [ci] = await db
+      .insert(configurationItems)
+      .values(insertCi)
+      .returning();
+    return ci;
+  }
+
+  async updateConfigurationItem(id: number, updateData: Partial<InsertConfigurationItem>): Promise<ConfigurationItem> {
+    const [ci] = await db
+      .update(configurationItems)
+      .set({ ...updateData, lastSyncDate: new Date() })
+      .where(eq(configurationItems.id, id))
+      .returning();
+    return ci;
+  }
+
+  async deleteConfigurationItem(id: number): Promise<boolean> {
+    const result = await db.delete(configurationItems).where(eq(configurationItems.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async syncConfigurationItems(ciClass: string, brand?: string): Promise<ConfigurationItem[]> {
+    // This method would typically call external APIs (Azure, M365, Intune, etc.)
+    // For now, we'll return existing CIs and update their sync date
+    let query = db.select().from(configurationItems).where(eq(configurationItems.ciClass, ciClass));
+    
+    if (brand && brand !== "all") {
+      query = query.where(eq(configurationItems.brand, brand));
+    }
+    
+    const cis = await query;
+    
+    // Update sync date for all found CIs
+    if (cis.length > 0) {
+      await db
+        .update(configurationItems)
+        .set({ lastSyncDate: new Date() })
+        .where(eq(configurationItems.ciClass, ciClass));
+    }
+    
+    return cis;
+  }
+
+  async getServiceRelationships(serviceId?: number): Promise<ServiceRelationship[]> {
+    if (serviceId) {
+      return await db.select().from(serviceRelationships)
+        .where(eq(serviceRelationships.parentServiceId, serviceId));
+    }
+    return await db.select().from(serviceRelationships);
+  }
+
+  async createServiceRelationship(insertRelationship: InsertServiceRelationship): Promise<ServiceRelationship> {
+    const [relationship] = await db
+      .insert(serviceRelationships)
+      .values(insertRelationship)
+      .returning();
+    return relationship;
+  }
+
+  async deleteServiceRelationship(id: number): Promise<boolean> {
+    const result = await db.delete(serviceRelationships).where(eq(serviceRelationships.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async getCiRelationships(ciId?: number): Promise<CiRelationship[]> {
+    if (ciId) {
+      return await db.select().from(ciRelationships)
+        .where(eq(ciRelationships.parentCiId, ciId));
+    }
+    return await db.select().from(ciRelationships);
+  }
+
+  async createCiRelationship(insertRelationship: InsertCiRelationship): Promise<CiRelationship> {
+    const [relationship] = await db
+      .insert(ciRelationships)
+      .values(insertRelationship)
+      .returning();
+    return relationship;
+  }
+
+  async deleteCiRelationship(id: number): Promise<boolean> {
+    const result = await db.delete(ciRelationships).where(eq(ciRelationships.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async getChangeRequests(brand?: string, status?: string): Promise<ChangeRequest[]> {
+    let query = db.select().from(changeRequests);
+    
+    if (status) {
+      query = query.where(eq(changeRequests.status, status));
+    } else if (brand && brand !== "all") {
+      query = query.where(eq(changeRequests.brand, brand));
+    }
+    
+    return await query;
+  }
+
+  async getChangeRequest(id: number): Promise<ChangeRequest | undefined> {
+    const [change] = await db.select().from(changeRequests).where(eq(changeRequests.id, id));
+    return change || undefined;
+  }
+
+  async createChangeRequest(insertChange: InsertChangeRequest): Promise<ChangeRequest> {
+    const [change] = await db
+      .insert(changeRequests)
+      .values(insertChange)
+      .returning();
+    return change;
+  }
+
+  async updateChangeRequest(id: number, updateData: Partial<InsertChangeRequest>): Promise<ChangeRequest> {
+    const [change] = await db
+      .update(changeRequests)
+      .set(updateData)
+      .where(eq(changeRequests.id, id))
+      .returning();
+    return change;
+  }
+
+  async deleteChangeRequest(id: number): Promise<boolean> {
+    const result = await db.delete(changeRequests).where(eq(changeRequests.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async getServiceLevelAgreements(serviceId?: number): Promise<ServiceLevelAgreement[]> {
+    if (serviceId) {
+      return await db.select().from(serviceLevelAgreements)
+        .where(eq(serviceLevelAgreements.serviceId, serviceId));
+    }
+    return await db.select().from(serviceLevelAgreements);
+  }
+
+  async getServiceLevelAgreement(id: number): Promise<ServiceLevelAgreement | undefined> {
+    const [sla] = await db.select().from(serviceLevelAgreements).where(eq(serviceLevelAgreements.id, id));
+    return sla || undefined;
+  }
+
+  async createServiceLevelAgreement(insertSla: InsertServiceLevelAgreement): Promise<ServiceLevelAgreement> {
+    const [sla] = await db
+      .insert(serviceLevelAgreements)
+      .values(insertSla)
+      .returning();
+    return sla;
+  }
+
+  async updateServiceLevelAgreement(id: number, updateData: Partial<InsertServiceLevelAgreement>): Promise<ServiceLevelAgreement> {
+    const [sla] = await db
+      .update(serviceLevelAgreements)
+      .set(updateData)
+      .where(eq(serviceLevelAgreements.id, id))
+      .returning();
+    return sla;
+  }
+
+  async deleteServiceLevelAgreement(id: number): Promise<boolean> {
+    const result = await db.delete(serviceLevelAgreements).where(eq(serviceLevelAgreements.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
   }
 }

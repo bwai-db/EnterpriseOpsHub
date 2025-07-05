@@ -4,7 +4,9 @@ import { storage } from "./storage";
 import { 
   insertVendorSchema, insertLicenseSchema, insertIncidentSchema, insertCloudServiceSchema,
   insertDivisionSchema, insertDepartmentSchema, insertFunctionSchema, insertPersonaSchema, insertUserSchema,
-  insertStoreSchema, insertStoreInventorySchema, insertStoreSalesSchema, insertStoreStaffSchema
+  insertStoreSchema, insertStoreInventorySchema, insertStoreSalesSchema, insertStoreStaffSchema,
+  insertServiceCategorySchema, insertItilServiceSchema, insertConfigurationItemSchema,
+  insertChangeRequestSchema, insertServiceLevelAgreementSchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -471,6 +473,158 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid staff data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to create staff member" });
+    }
+  });
+
+  // ITIL Service Management and CMDB Routes
+  // Service Categories
+  app.get("/api/service-categories", async (req, res) => {
+    try {
+      const { brand } = req.query;
+      const categories = await storage.getServiceCategories(brand as string);
+      res.json(categories);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch service categories" });
+    }
+  });
+
+  app.post("/api/service-categories", async (req, res) => {
+    try {
+      const categoryData = insertServiceCategorySchema.parse(req.body);
+      const category = await storage.createServiceCategory(categoryData);
+      res.status(201).json(category);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid category data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create service category" });
+    }
+  });
+
+  // ITIL Services
+  app.get("/api/itil-services", async (req, res) => {
+    try {
+      const { brand, categoryId } = req.query;
+      const services = await storage.getItilServices(
+        brand as string,
+        categoryId ? parseInt(categoryId as string) : undefined
+      );
+      res.json(services);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch ITIL services" });
+    }
+  });
+
+  app.post("/api/itil-services", async (req, res) => {
+    try {
+      const serviceData = insertItilServiceSchema.parse(req.body);
+      const service = await storage.createItilService(serviceData);
+      res.status(201).json(service);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid service data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create ITIL service" });
+    }
+  });
+
+  // Configuration Items (CMDB)
+  app.get("/api/configuration-items", async (req, res) => {
+    try {
+      const { brand, serviceId, ciClass } = req.query;
+      const cis = await storage.getConfigurationItems(
+        brand as string,
+        serviceId ? parseInt(serviceId as string) : undefined,
+        ciClass as string
+      );
+      res.json(cis);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch configuration items" });
+    }
+  });
+
+  app.post("/api/configuration-items", async (req, res) => {
+    try {
+      const ciData = insertConfigurationItemSchema.parse(req.body);
+      const ci = await storage.createConfigurationItem(ciData);
+      res.status(201).json(ci);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid CI data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create configuration item" });
+    }
+  });
+
+  app.post("/api/configuration-items/sync/:ciClass", async (req, res) => {
+    try {
+      const { ciClass } = req.params;
+      const { brand } = req.query;
+      const cis = await storage.syncConfigurationItems(ciClass, brand as string);
+      res.json({ message: `Synced ${cis.length} configuration items`, items: cis });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to sync configuration items" });
+    }
+  });
+
+  // Change Requests
+  app.get("/api/change-requests", async (req, res) => {
+    try {
+      const { brand, status } = req.query;
+      const changes = await storage.getChangeRequests(brand as string, status as string);
+      res.json(changes);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch change requests" });
+    }
+  });
+
+  app.post("/api/change-requests", async (req, res) => {
+    try {
+      const changeData = insertChangeRequestSchema.parse(req.body);
+      const change = await storage.createChangeRequest(changeData);
+      res.status(201).json(change);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid change request data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create change request" });
+    }
+  });
+
+  app.patch("/api/change-requests/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = req.body;
+      const change = await storage.updateChangeRequest(id, updateData);
+      res.json(change);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update change request" });
+    }
+  });
+
+  // Service Level Agreements
+  app.get("/api/service-level-agreements", async (req, res) => {
+    try {
+      const { serviceId } = req.query;
+      const slas = await storage.getServiceLevelAgreements(
+        serviceId ? parseInt(serviceId as string) : undefined
+      );
+      res.json(slas);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch SLAs" });
+    }
+  });
+
+  app.post("/api/service-level-agreements", async (req, res) => {
+    try {
+      const slaData = insertServiceLevelAgreementSchema.parse(req.body);
+      const sla = await storage.createServiceLevelAgreement(slaData);
+      res.status(201).json(sla);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid SLA data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create SLA" });
     }
   });
 

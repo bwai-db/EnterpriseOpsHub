@@ -131,6 +131,7 @@ Changelog:
 - July 05, 2025. Enhanced user management with EntraID integration and synchronization
 - July 05, 2025. Created People & Organization page with user directory and org structure
 - July 05, 2025. Added comprehensive retail operations management with stores, inventory, sales, and staff tracking
+- July 05, 2025. Implemented ITIL Service Management with CMDB integration for M365, Azure, Intune, Hybrid Endpoint, Identity, Print, CAD Workstation, and 3D Printing services
 ```
 
 ## User Preferences

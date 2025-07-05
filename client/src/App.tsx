@@ -15,6 +15,7 @@ import Security from "@/pages/security";
 import HRService from "@/pages/hr-service";
 import People from "@/pages/people";
 import RetailOperations from "@/pages/retail-operations";
+import ServiceManagement from "@/pages/service-management";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import type { Brand } from "@/lib/types";
@@ -33,6 +34,7 @@ function Router({ selectedBrand }: { selectedBrand: Brand }) {
       <Route path="/hr-service" component={() => <HRService selectedBrand={selectedBrand} />} />
       <Route path="/people" component={() => <People selectedBrand={selectedBrand} />} />
       <Route path="/retail-operations" component={() => <RetailOperations selectedBrand={selectedBrand} />} />
+      <Route path="/service-management" component={() => <ServiceManagement selectedBrand={selectedBrand} />} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, decimal, date } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, decimal, date, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -204,6 +204,118 @@ export const storeStaff = pgTable("store_staff", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// ITIL Service Management and CMDB Tables
+export const serviceCategories = pgTable("service_categories", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  brand: text("brand").notNull(), // blorcs, shaypops, all
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const itilServices = pgTable("itil_services", {
+  id: serial("id").primaryKey(),
+  serviceName: text("service_name").notNull(),
+  serviceCode: text("service_code").notNull().unique(),
+  categoryId: integer("category_id").references(() => serviceCategories.id),
+  description: text("description"),
+  serviceOwner: text("service_owner"),
+  businessCriticality: text("business_criticality").notNull(), // critical, high, medium, low
+  serviceStatus: text("service_status").notNull(), // operational, planned, retired, under_change
+  slaTarget: text("sla_target"), // e.g., "99.9% uptime"
+  brand: text("brand").notNull(), // blorcs, shaypops, all
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const configurationItems = pgTable("configuration_items", {
+  id: serial("id").primaryKey(),
+  ciName: text("ci_name").notNull(),
+  ciType: text("ci_type").notNull(), // server, application, database, network, etc.
+  ciClass: text("ci_class").notNull(), // m365, azure, intune, hybrid_endpoint, identity, print, cad, 3d_printing
+  serialNumber: text("serial_number"),
+  assetTag: text("asset_tag"),
+  status: text("status").notNull(), // active, inactive, maintenance, retired
+  environment: text("environment").notNull(), // production, staging, development, test
+  location: text("location"),
+  assignedTo: text("assigned_to"),
+  serviceId: integer("service_id").references(() => itilServices.id),
+  vendor: text("vendor"),
+  model: text("model"),
+  operatingSystem: text("operating_system"),
+  ipAddress: text("ip_address"),
+  macAddress: text("mac_address"),
+  installDate: timestamp("install_date"),
+  warrantyExpiry: timestamp("warranty_expiry"),
+  lastSyncDate: timestamp("last_sync_date"),
+  syncSource: text("sync_source"), // azure_api, m365_api, intune_api, manual
+  attributes: text("attributes"), // flexible storage for service-specific attributes as JSON string
+  brand: text("brand").notNull(), // blorcs, shaypops, all
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const serviceRelationships = pgTable("service_relationships", {
+  id: serial("id").primaryKey(),
+  parentServiceId: integer("parent_service_id").references(() => itilServices.id),
+  childServiceId: integer("child_service_id").references(() => itilServices.id),
+  relationshipType: text("relationship_type").notNull(), // depends_on, supports, hosted_on, connects_to
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const ciRelationships = pgTable("ci_relationships", {
+  id: serial("id").primaryKey(),
+  parentCiId: integer("parent_ci_id").references(() => configurationItems.id),
+  childCiId: integer("child_ci_id").references(() => configurationItems.id),
+  relationshipType: text("relationship_type").notNull(), // installed_on, connects_to, depends_on, part_of
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const changeRequests = pgTable("change_requests", {
+  id: serial("id").primaryKey(),
+  changeNumber: text("change_number").notNull().unique(),
+  title: text("title").notNull(),
+  description: text("description"),
+  requestedBy: text("requested_by").notNull(),
+  assignedTo: text("assigned_to"),
+  changeType: text("change_type").notNull(), // standard, normal, emergency, urgent
+  risk: text("risk").notNull(), // low, medium, high, very_high
+  impact: text("impact").notNull(), // low, medium, high, very_high
+  priority: text("priority").notNull(), // low, medium, high, critical
+  status: text("status").notNull(), // draft, submitted, approved, in_progress, completed, cancelled, failed
+  plannedStartDate: timestamp("planned_start_date"),
+  plannedEndDate: timestamp("planned_end_date"),
+  actualStartDate: timestamp("actual_start_date"),
+  actualEndDate: timestamp("actual_end_date"),
+  rollbackPlan: text("rollback_plan"),
+  testingNotes: text("testing_notes"),
+  affectedCis: text("affected_cis").array(), // array of CI IDs
+  affectedServices: text("affected_services").array(), // array of service IDs
+  approver: text("approver"),
+  approvalDate: timestamp("approval_date"),
+  brand: text("brand").notNull(), // blorcs, shaypops, all
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const serviceLevelAgreements = pgTable("service_level_agreements", {
+  id: serial("id").primaryKey(),
+  serviceId: integer("service_id").references(() => itilServices.id),
+  slaName: text("sla_name").notNull(),
+  metricType: text("metric_type").notNull(), // availability, response_time, resolution_time, throughput
+  target: text("target").notNull(), // e.g., "99.9%", "< 5 minutes", "< 4 hours"
+  measurement: text("measurement").notNull(), // monthly, weekly, daily
+  reportingPeriod: text("reporting_period").notNull(),
+  status: text("status").notNull(), // active, suspended, expired
+  validFrom: timestamp("valid_from").notNull(),
+  validTo: timestamp("valid_to"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertDivisionSchema = createInsertSchema(divisions).omit({
   id: true,
@@ -276,6 +388,50 @@ export const insertStoreStaffSchema = createInsertSchema(storeStaff).omit({
   updatedAt: true,
 });
 
+export const insertServiceCategorySchema = createInsertSchema(serviceCategories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertItilServiceSchema = createInsertSchema(itilServices).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertConfigurationItemSchema = createInsertSchema(configurationItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastSyncDate: true,
+});
+
+export const insertServiceRelationshipSchema = createInsertSchema(serviceRelationships).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCiRelationshipSchema = createInsertSchema(ciRelationships).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertChangeRequestSchema = createInsertSchema(changeRequests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  actualStartDate: true,
+  actualEndDate: true,
+  approvalDate: true,
+});
+
+export const insertServiceLevelAgreementSchema = createInsertSchema(serviceLevelAgreements).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type InsertDivision = z.infer<typeof insertDivisionSchema>;
 export type Division = typeof divisions.$inferSelect;
@@ -315,3 +471,24 @@ export type StoreSales = typeof storeSales.$inferSelect;
 
 export type InsertStoreStaff = z.infer<typeof insertStoreStaffSchema>;
 export type StoreStaff = typeof storeStaff.$inferSelect;
+
+export type InsertServiceCategory = z.infer<typeof insertServiceCategorySchema>;
+export type ServiceCategory = typeof serviceCategories.$inferSelect;
+
+export type InsertItilService = z.infer<typeof insertItilServiceSchema>;
+export type ItilService = typeof itilServices.$inferSelect;
+
+export type InsertConfigurationItem = z.infer<typeof insertConfigurationItemSchema>;
+export type ConfigurationItem = typeof configurationItems.$inferSelect;
+
+export type InsertServiceRelationship = z.infer<typeof insertServiceRelationshipSchema>;
+export type ServiceRelationship = typeof serviceRelationships.$inferSelect;
+
+export type InsertCiRelationship = z.infer<typeof insertCiRelationshipSchema>;
+export type CiRelationship = typeof ciRelationships.$inferSelect;
+
+export type InsertChangeRequest = z.infer<typeof insertChangeRequestSchema>;
+export type ChangeRequest = typeof changeRequests.$inferSelect;
+
+export type InsertServiceLevelAgreement = z.infer<typeof insertServiceLevelAgreementSchema>;
+export type ServiceLevelAgreement = typeof serviceLevelAgreements.$inferSelect;
