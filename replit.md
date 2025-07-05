@@ -29,7 +29,7 @@ This is a full-stack enterprise operations management platform built with React,
 ## Key Components
 
 ### Data Models
-The system manages nine core entities with organizational structure:
+The system manages thirteen core entities with organizational structure:
 1. **Users**: Enhanced user management with EntraID integration
 2. **Divisions**: Top-level organizational divisions (Technology, Operations, Marketing, HR)
 3. **Departments**: Departments within divisions (IT Infrastructure, Software Development, etc.)
@@ -39,6 +39,10 @@ The system manages nine core entities with organizational structure:
 7. **Licenses**: Software license lifecycle management
 8. **Incidents**: ITIL incident management system
 9. **Cloud Services**: Cloud infrastructure monitoring
+10. **Stores**: Physical retail store locations and management
+11. **Store Inventory**: Product inventory tracking per store location
+12. **Store Sales**: Transaction records and sales performance tracking
+13. **Store Staff**: Employee management for retail locations
 
 ### Multi-Brand Support
 - **Brand Filtering**: All entities support brand-specific filtering (Blorcs, Shaypops, All)
@@ -126,6 +130,7 @@ Changelog:
 - July 05, 2025. Added organizational structure (divisions, departments, functions, personas)
 - July 05, 2025. Enhanced user management with EntraID integration and synchronization
 - July 05, 2025. Created People & Organization page with user directory and org structure
+- July 05, 2025. Added comprehensive retail operations management with stores, inventory, sales, and staff tracking
 ```
 
 ## User Preferences

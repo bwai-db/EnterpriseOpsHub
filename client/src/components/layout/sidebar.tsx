@@ -9,7 +9,8 @@ import {
   Truck, 
   Shield, 
   Users,
-  UserCheck
+  UserCheck,
+  ShoppingBag
 } from "lucide-react";
 
 const navigation = [
@@ -21,6 +22,7 @@ const navigation = [
   { name: "Supply Chain", href: "/supply-chain", icon: Truck },
   { name: "Security & Compliance", href: "/security", icon: Shield },
   { name: "People & Organization", href: "/people", icon: UserCheck },
+  { name: "Retail Operations", href: "/retail-operations", icon: ShoppingBag },
   { name: "HR Service Desk", href: "/hr-service", icon: Users },
 ];
 

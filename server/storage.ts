@@ -1,6 +1,7 @@
 import { 
   users, vendors, licenses, incidents, cloudServices,
   divisions, departments, functions, personas,
+  stores, storeInventory, storeSales, storeStaff,
   type User, type InsertUser,
   type Vendor, type InsertVendor,
   type License, type InsertLicense,
@@ -9,7 +10,11 @@ import {
   type Division, type InsertDivision,
   type Department, type InsertDepartment,
   type Function, type InsertFunction,
-  type Persona, type InsertPersona
+  type Persona, type InsertPersona,
+  type Store, type InsertStore,
+  type StoreInventory, type InsertStoreInventory,
+  type StoreSales, type InsertStoreSales,
+  type StoreStaff, type InsertStoreStaff
 } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -76,6 +81,29 @@ export interface IStorage {
   getCloudService(id: number): Promise<CloudService | undefined>;
   createCloudService(service: InsertCloudService): Promise<CloudService>;
   updateCloudService(id: number, service: Partial<InsertCloudService>): Promise<CloudService>;
+
+  // Retail Store Operations
+  getStores(brand?: string): Promise<Store[]>;
+  getStore(id: number): Promise<Store | undefined>;
+  createStore(store: InsertStore): Promise<Store>;
+  updateStore(id: number, store: Partial<InsertStore>): Promise<Store>;
+  deleteStore(id: number): Promise<boolean>;
+
+  getStoreInventory(storeId?: number, brand?: string): Promise<StoreInventory[]>;
+  getInventoryItem(id: number): Promise<StoreInventory | undefined>;
+  createInventoryItem(item: InsertStoreInventory): Promise<StoreInventory>;
+  updateInventoryItem(id: number, item: Partial<InsertStoreInventory>): Promise<StoreInventory>;
+  deleteInventoryItem(id: number): Promise<boolean>;
+
+  getStoreSales(storeId?: number, brand?: string): Promise<StoreSales[]>;
+  getSalesRecord(id: number): Promise<StoreSales | undefined>;
+  createSalesRecord(sale: InsertStoreSales): Promise<StoreSales>;
+
+  getStoreStaff(storeId?: number, brand?: string): Promise<StoreStaff[]>;
+  getStaffMember(id: number): Promise<StoreStaff | undefined>;
+  createStaffMember(staff: InsertStoreStaff): Promise<StoreStaff>;
+  updateStaffMember(id: number, staff: Partial<InsertStoreStaff>): Promise<StoreStaff>;
+  deleteStaffMember(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -429,6 +457,138 @@ export class DatabaseStorage implements IStorage {
       .where(eq(cloudServices.id, id))
       .returning();
     return service;
+  }
+
+  // Retail Store Operations
+  async getStores(brand?: string): Promise<Store[]> {
+    if (brand && brand !== "all") {
+      return await db.select().from(stores).where(eq(stores.brand, brand));
+    }
+    return await db.select().from(stores);
+  }
+
+  async getStore(id: number): Promise<Store | undefined> {
+    const [store] = await db.select().from(stores).where(eq(stores.id, id));
+    return store || undefined;
+  }
+
+  async createStore(insertStore: InsertStore): Promise<Store> {
+    const [store] = await db
+      .insert(stores)
+      .values(insertStore)
+      .returning();
+    return store;
+  }
+
+  async updateStore(id: number, updateData: Partial<InsertStore>): Promise<Store> {
+    const [store] = await db
+      .update(stores)
+      .set(updateData)
+      .where(eq(stores.id, id))
+      .returning();
+    return store;
+  }
+
+  async deleteStore(id: number): Promise<boolean> {
+    const result = await db.delete(stores).where(eq(stores.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async getStoreInventory(storeId?: number, brand?: string): Promise<StoreInventory[]> {
+    if (storeId) {
+      return await db.select().from(storeInventory).where(eq(storeInventory.storeId, storeId));
+    } else if (brand && brand !== "all") {
+      return await db.select().from(storeInventory).where(eq(storeInventory.brand, brand));
+    }
+    
+    return await db.select().from(storeInventory);
+  }
+
+  async getInventoryItem(id: number): Promise<StoreInventory | undefined> {
+    const [item] = await db.select().from(storeInventory).where(eq(storeInventory.id, id));
+    return item || undefined;
+  }
+
+  async createInventoryItem(insertItem: InsertStoreInventory): Promise<StoreInventory> {
+    const [item] = await db
+      .insert(storeInventory)
+      .values(insertItem)
+      .returning();
+    return item;
+  }
+
+  async updateInventoryItem(id: number, updateData: Partial<InsertStoreInventory>): Promise<StoreInventory> {
+    const [item] = await db
+      .update(storeInventory)
+      .set(updateData)
+      .where(eq(storeInventory.id, id))
+      .returning();
+    return item;
+  }
+
+  async deleteInventoryItem(id: number): Promise<boolean> {
+    const result = await db.delete(storeInventory).where(eq(storeInventory.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async getStoreSales(storeId?: number, brand?: string): Promise<StoreSales[]> {
+    if (storeId) {
+      return await db.select().from(storeSales).where(eq(storeSales.storeId, storeId));
+    } else if (brand && brand !== "all") {
+      return await db.select().from(storeSales).where(eq(storeSales.brand, brand));
+    }
+    
+    return await db.select().from(storeSales);
+  }
+
+  async getSalesRecord(id: number): Promise<StoreSales | undefined> {
+    const [sale] = await db.select().from(storeSales).where(eq(storeSales.id, id));
+    return sale || undefined;
+  }
+
+  async createSalesRecord(insertSale: InsertStoreSales): Promise<StoreSales> {
+    const [sale] = await db
+      .insert(storeSales)
+      .values(insertSale)
+      .returning();
+    return sale;
+  }
+
+  async getStoreStaff(storeId?: number, brand?: string): Promise<StoreStaff[]> {
+    if (storeId) {
+      return await db.select().from(storeStaff).where(eq(storeStaff.storeId, storeId));
+    } else if (brand && brand !== "all") {
+      return await db.select().from(storeStaff).where(eq(storeStaff.brand, brand));
+    }
+    
+    return await db.select().from(storeStaff);
+  }
+
+  async getStaffMember(id: number): Promise<StoreStaff | undefined> {
+    const [staff] = await db.select().from(storeStaff).where(eq(storeStaff.id, id));
+    return staff || undefined;
+  }
+
+  async createStaffMember(insertStaff: InsertStoreStaff): Promise<StoreStaff> {
+    const [staff] = await db
+      .insert(storeStaff)
+      .values(insertStaff)
+      .returning();
+    return staff;
+  }
+
+  async updateStaffMember(id: number, updateData: Partial<InsertStoreStaff>): Promise<StoreStaff> {
+    const [staff] = await db
+      .update(storeStaff)
+      .set(updateData)
+      .where(eq(storeStaff.id, id))
+      .returning();
+    return staff;
+  }
+
+  async deleteStaffMember(id: number): Promise<boolean> {
+    const result = await db.delete(storeStaff).where(eq(storeStaff.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
   }
 }
 

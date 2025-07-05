@@ -3,7 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { 
   insertVendorSchema, insertLicenseSchema, insertIncidentSchema, insertCloudServiceSchema,
-  insertDivisionSchema, insertDepartmentSchema, insertFunctionSchema, insertPersonaSchema, insertUserSchema
+  insertDivisionSchema, insertDepartmentSchema, insertFunctionSchema, insertPersonaSchema, insertUserSchema,
+  insertStoreSchema, insertStoreInventorySchema, insertStoreSalesSchema, insertStoreStaffSchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -364,6 +365,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch dashboard metrics" });
+    }
+  });
+
+  // Retail Store Operations Routes
+  // Stores
+  app.get("/api/stores", async (req, res) => {
+    try {
+      const { brand } = req.query;
+      const stores = await storage.getStores(brand as string);
+      res.json(stores);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch stores" });
+    }
+  });
+
+  app.post("/api/stores", async (req, res) => {
+    try {
+      const storeData = insertStoreSchema.parse(req.body);
+      const store = await storage.createStore(storeData);
+      res.status(201).json(store);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid store data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create store" });
+    }
+  });
+
+  // Store Inventory
+  app.get("/api/store-inventory", async (req, res) => {
+    try {
+      const { storeId, brand } = req.query;
+      const inventory = await storage.getStoreInventory(
+        storeId ? parseInt(storeId as string) : undefined,
+        brand as string
+      );
+      res.json(inventory);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch inventory" });
+    }
+  });
+
+  app.post("/api/store-inventory", async (req, res) => {
+    try {
+      const inventoryData = insertStoreInventorySchema.parse(req.body);
+      const inventory = await storage.createInventoryItem(inventoryData);
+      res.status(201).json(inventory);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid inventory data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create inventory item" });
+    }
+  });
+
+  // Store Sales
+  app.get("/api/store-sales", async (req, res) => {
+    try {
+      const { storeId, brand } = req.query;
+      const sales = await storage.getStoreSales(
+        storeId ? parseInt(storeId as string) : undefined,
+        brand as string
+      );
+      res.json(sales);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch sales" });
+    }
+  });
+
+  app.post("/api/store-sales", async (req, res) => {
+    try {
+      const salesData = insertStoreSalesSchema.parse(req.body);
+      const sale = await storage.createSalesRecord(salesData);
+      res.status(201).json(sale);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid sales data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create sales record" });
+    }
+  });
+
+  // Store Staff
+  app.get("/api/store-staff", async (req, res) => {
+    try {
+      const { storeId, brand } = req.query;
+      const staff = await storage.getStoreStaff(
+        storeId ? parseInt(storeId as string) : undefined,
+        brand as string
+      );
+      res.json(staff);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch staff" });
+    }
+  });
+
+  app.post("/api/store-staff", async (req, res) => {
+    try {
+      const staffData = insertStoreStaffSchema.parse(req.body);
+      const staff = await storage.createStaffMember(staffData);
+      res.status(201).json(staff);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid staff data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create staff member" });
     }
   });
 
