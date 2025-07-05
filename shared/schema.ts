@@ -423,6 +423,7 @@ export const configurationItems = pgTable("configuration_items", {
   lastSyncDate: timestamp("last_sync_date"),
   syncSource: text("sync_source"), // azure_api, m365_api, intune_api, manual
   attributes: text("attributes"), // flexible storage for service-specific attributes as JSON string
+  secureBaseline: text("secure_baseline"), // JSON string containing security configuration baseline
   brand: text("brand").notNull(), // blorcs, shaypops, all
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

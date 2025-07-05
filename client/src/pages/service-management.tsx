@@ -415,6 +415,30 @@ export default function ServiceManagement({ selectedBrand }: ServiceManagementPr
                       </pre>
                     </div>
                   )}
+                  {ci.secureBaseline && (
+                    <div className="mt-3 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Shield className="h-4 w-4 text-green-600" />
+                        <p className="text-sm font-medium text-green-800 dark:text-green-200">Security Baseline Configuration</p>
+                      </div>
+                      <div className="space-y-2">
+                        {Object.entries(JSON.parse(ci.secureBaseline)).map(([category, controls]: [string, any]) => (
+                          <div key={category} className="space-y-1">
+                            <p className="text-xs font-medium text-green-700 dark:text-green-300 capitalize">
+                              {category.replace(/_/g, ' ')}
+                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-1 ml-2">
+                              {Object.entries(controls).map(([control, value]: [string, any]) => (
+                                <div key={control} className="text-xs text-green-600 dark:text-green-400">
+                                  <span className="font-medium">{control.replace(/_/g, ' ')}:</span> {value}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
