@@ -13,6 +13,7 @@ import ITIL from "@/pages/itil";
 import SupplyChain from "@/pages/supply-chain";
 import Security from "@/pages/security";
 import HRService from "@/pages/hr-service";
+import People from "@/pages/people";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import type { Brand } from "@/lib/types";
@@ -29,6 +30,7 @@ function Router({ selectedBrand }: { selectedBrand: Brand }) {
       <Route path="/supply-chain" component={() => <SupplyChain selectedBrand={selectedBrand} />} />
       <Route path="/security" component={() => <Security selectedBrand={selectedBrand} />} />
       <Route path="/hr-service" component={() => <HRService selectedBrand={selectedBrand} />} />
+      <Route path="/people" component={() => <People selectedBrand={selectedBrand} />} />
       <Route component={NotFound} />
     </Switch>
   );

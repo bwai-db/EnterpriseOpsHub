@@ -1,10 +1,152 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertVendorSchema, insertLicenseSchema, insertIncidentSchema, insertCloudServiceSchema } from "@shared/schema";
+import { 
+  insertVendorSchema, insertLicenseSchema, insertIncidentSchema, insertCloudServiceSchema,
+  insertDivisionSchema, insertDepartmentSchema, insertFunctionSchema, insertPersonaSchema, insertUserSchema
+} from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Divisions
+  app.get("/api/divisions", async (req, res) => {
+    try {
+      const { brand } = req.query;
+      const divisions = await storage.getDivisions(brand as string);
+      res.json(divisions);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch divisions" });
+    }
+  });
+
+  app.post("/api/divisions", async (req, res) => {
+    try {
+      const divisionData = insertDivisionSchema.parse(req.body);
+      const division = await storage.createDivision(divisionData);
+      res.status(201).json(division);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid division data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create division" });
+    }
+  });
+
+  // Departments
+  app.get("/api/departments", async (req, res) => {
+    try {
+      const { brand, divisionId } = req.query;
+      const departments = await storage.getDepartments(
+        brand as string, 
+        divisionId ? parseInt(divisionId as string) : undefined
+      );
+      res.json(departments);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch departments" });
+    }
+  });
+
+  app.post("/api/departments", async (req, res) => {
+    try {
+      const departmentData = insertDepartmentSchema.parse(req.body);
+      const department = await storage.createDepartment(departmentData);
+      res.status(201).json(department);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid department data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create department" });
+    }
+  });
+
+  // Functions
+  app.get("/api/functions", async (req, res) => {
+    try {
+      const { brand, departmentId } = req.query;
+      const functions = await storage.getFunctions(
+        brand as string, 
+        departmentId ? parseInt(departmentId as string) : undefined
+      );
+      res.json(functions);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch functions" });
+    }
+  });
+
+  app.post("/api/functions", async (req, res) => {
+    try {
+      const functionData = insertFunctionSchema.parse(req.body);
+      const func = await storage.createFunction(functionData);
+      res.status(201).json(func);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid function data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create function" });
+    }
+  });
+
+  // Personas
+  app.get("/api/personas", async (req, res) => {
+    try {
+      const { brand } = req.query;
+      const personas = await storage.getPersonas(brand as string);
+      res.json(personas);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch personas" });
+    }
+  });
+
+  app.post("/api/personas", async (req, res) => {
+    try {
+      const personaData = insertPersonaSchema.parse(req.body);
+      const persona = await storage.createPersona(personaData);
+      res.status(201).json(persona);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid persona data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create persona" });
+    }
+  });
+
+  // Users
+  app.get("/api/users", async (req, res) => {
+    try {
+      const { brand } = req.query;
+      const users = await storage.getUsers(brand as string);
+      res.json(users);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.post("/api/users", async (req, res) => {
+    try {
+      const userData = insertUserSchema.parse(req.body);
+      const user = await storage.createUser(userData);
+      res.status(201).json(user);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid user data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
+  app.post("/api/users/sync-entra", async (req, res) => {
+    try {
+      const { entraData } = req.body;
+      if (!entraData) {
+        return res.status(400).json({ message: "EntraID data is required" });
+      }
+      const user = await storage.syncUserFromEntra(entraData);
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to sync user from EntraID" });
+    }
+  });
+
   // Vendors
   app.get("/api/vendors", async (req, res) => {
     try {

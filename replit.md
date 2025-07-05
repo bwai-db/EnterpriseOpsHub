@@ -29,12 +29,16 @@ This is a full-stack enterprise operations management platform built with React,
 ## Key Components
 
 ### Data Models
-The system manages five core entities:
-1. **Users**: Authentication and user management
-2. **Vendors**: Software, hardware, cloud, and manufacturing vendor tracking
-3. **Licenses**: Software license lifecycle management
-4. **Incidents**: ITIL incident management system
-5. **Cloud Services**: Cloud infrastructure monitoring
+The system manages nine core entities with organizational structure:
+1. **Users**: Enhanced user management with EntraID integration
+2. **Divisions**: Top-level organizational divisions (Technology, Operations, Marketing, HR)
+3. **Departments**: Departments within divisions (IT Infrastructure, Software Development, etc.)
+4. **Functions**: Specific job functions within departments
+5. **Personas**: Role-based permissions and access control
+6. **Vendors**: Software, hardware, cloud, and manufacturing vendor tracking
+7. **Licenses**: Software license lifecycle management
+8. **Incidents**: ITIL incident management system
+9. **Cloud Services**: Cloud infrastructure monitoring
 
 ### Multi-Brand Support
 - **Brand Filtering**: All entities support brand-specific filtering (Blorcs, Shaypops, All)
@@ -119,6 +123,9 @@ Changelog:
 - July 05, 2025. Initial setup with React/TypeScript frontend and Node.js backend
 - July 05, 2025. Added PostgreSQL database integration with Drizzle ORM
 - July 05, 2025. Replaced in-memory storage with persistent database storage
+- July 05, 2025. Added organizational structure (divisions, departments, functions, personas)
+- July 05, 2025. Enhanced user management with EntraID integration and synchronization
+- July 05, 2025. Created People & Organization page with user directory and org structure
 ```
 
 ## User Preferences

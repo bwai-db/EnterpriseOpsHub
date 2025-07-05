@@ -2,10 +2,65 @@ import { pgTable, text, serial, integer, boolean, timestamp, decimal } from "dri
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Organizational Structure Tables
+export const divisions = pgTable("divisions", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  brand: text("brand"), // blorcs, shaypops, all
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const departments = pgTable("departments", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  divisionId: integer("division_id").references(() => divisions.id),
+  brand: text("brand"), // blorcs, shaypops, all
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const functions = pgTable("functions", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  departmentId: integer("department_id").references(() => departments.id),
+  brand: text("brand"), // blorcs, shaypops, all
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const personas = pgTable("personas", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  permissions: text("permissions").array(), // Array of permission strings
+  brand: text("brand"), // blorcs, shaypops, all
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  password: text("password"), // Optional for EntraID users
+  email: text("email").notNull().unique(),
+  displayName: text("display_name").notNull(),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  entraId: text("entra_id").unique(), // Azure AD Object ID
+  jobTitle: text("job_title"),
+  department: text("department"),
+  manager: text("manager"),
+  officeLocation: text("office_location"),
+  mobilePhone: text("mobile_phone"),
+  businessPhone: text("business_phone"),
+  isActive: boolean("is_active").default(true),
+  lastSync: timestamp("last_sync"), // Last EntraID sync
+  departmentId: integer("department_id").references(() => departments.id),
+  functionId: integer("function_id").references(() => functions.id),
+  personaId: integer("persona_id").references(() => personas.id),
+  brand: text("brand"), // blorcs, shaypops, all
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const vendors = pgTable("vendors", {
@@ -64,9 +119,31 @@ export const cloudServices = pgTable("cloud_services", {
 });
 
 // Insert schemas
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const insertDivisionSchema = createInsertSchema(divisions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertDepartmentSchema = createInsertSchema(departments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertFunctionSchema = createInsertSchema(functions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPersonaSchema = createInsertSchema(personas).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastSync: true,
 });
 
 export const insertVendorSchema = createInsertSchema(vendors).omit({
@@ -91,6 +168,18 @@ export const insertCloudServiceSchema = createInsertSchema(cloudServices).omit({
 });
 
 // Types
+export type InsertDivision = z.infer<typeof insertDivisionSchema>;
+export type Division = typeof divisions.$inferSelect;
+
+export type InsertDepartment = z.infer<typeof insertDepartmentSchema>;
+export type Department = typeof departments.$inferSelect;
+
+export type InsertFunction = z.infer<typeof insertFunctionSchema>;
+export type Function = typeof functions.$inferSelect;
+
+export type InsertPersona = z.infer<typeof insertPersonaSchema>;
+export type Persona = typeof personas.$inferSelect;
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
