@@ -10,6 +10,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { insertVendorSchema, type Vendor, type InsertVendor } from "@shared/schema";
 import type { Brand } from "@/lib/types";
+import { z } from "zod";
 
 interface VendorFormProps {
   vendor?: Vendor | null;
@@ -18,14 +19,21 @@ interface VendorFormProps {
 }
 
 const vendorFormSchema = insertVendorSchema.extend({
-  contractStart: insertVendorSchema.shape.contractStart.optional(),
-  contractEnd: insertVendorSchema.shape.contractEnd.optional(),
+  contractStart: z.string().optional(),
+  contractEnd: z.string().optional(),
+  contactEmail: z.string().optional(),
+  contactPhone: z.string().optional(),
+  monthlyCost: z.string().optional(),
+  description: z.string().optional(),
+  brand: z.string().optional(),
 });
+
+type VendorFormData = z.infer<typeof vendorFormSchema>;
 
 export default function VendorForm({ vendor, onSuccess, selectedBrand }: VendorFormProps) {
   const { toast } = useToast();
   
-  const form = useForm<InsertVendor>({
+  const form = useForm<VendorFormData>({
     resolver: zodResolver(vendorFormSchema),
     defaultValues: {
       name: vendor?.name || "",
@@ -88,7 +96,7 @@ export default function VendorForm({ vendor, onSuccess, selectedBrand }: VendorF
     },
   });
 
-  const onSubmit = (data: InsertVendor) => {
+  const onSubmit = (data: VendorFormData) => {
     // Convert date strings to Date objects
     const processedData = {
       ...data,
@@ -193,7 +201,7 @@ export default function VendorForm({ vendor, onSuccess, selectedBrand }: VendorF
               <FormItem>
                 <FormLabel>Contact Email</FormLabel>
                 <FormControl>
-                  <Input type="email" placeholder="contact@vendor.com" {...field} />
+                  <Input type="email" placeholder="contact@vendor.com" {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -207,7 +215,7 @@ export default function VendorForm({ vendor, onSuccess, selectedBrand }: VendorF
               <FormItem>
                 <FormLabel>Contact Phone</FormLabel>
                 <FormControl>
-                  <Input placeholder="+1 (555) 123-4567" {...field} />
+                  <Input placeholder="+1 (555) 123-4567" {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -249,7 +257,7 @@ export default function VendorForm({ vendor, onSuccess, selectedBrand }: VendorF
               <FormItem>
                 <FormLabel>Monthly Cost</FormLabel>
                 <FormControl>
-                  <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                  <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -262,7 +270,7 @@ export default function VendorForm({ vendor, onSuccess, selectedBrand }: VendorF
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Brand</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select brand" />
@@ -291,6 +299,7 @@ export default function VendorForm({ vendor, onSuccess, selectedBrand }: VendorF
                   placeholder="Enter vendor description, services provided, etc."
                   className="min-h-[100px]"
                   {...field} 
+                  value={field.value || ""}
                 />
               </FormControl>
               <FormMessage />
