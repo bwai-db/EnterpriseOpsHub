@@ -27,22 +27,19 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
   const queryClient = useQueryClient();
 
   const { data: libraries = [], isLoading: librariesLoading } = useQuery<IntegrationLibrary[]>({
-    queryKey: ['/api/integration-libraries', selectedBrand],
-    queryFn: () => apiRequest(`/api/integration-libraries?brand=${selectedBrand}`),
+    queryKey: [`/api/integration-libraries?brand=${selectedBrand}`],
   });
 
   const { data: endpoints = [] } = useQuery<IntegrationEndpoint[]>({
     queryKey: ['/api/integration-endpoints'],
-    queryFn: () => apiRequest('/api/integration-endpoints'),
   });
 
   const { data: credentials = [] } = useQuery<IntegrationCredential[]>({
     queryKey: ['/api/integration-credentials'],
-    queryFn: () => apiRequest('/api/integration-credentials'),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => apiRequest(`/api/integration-libraries/${id}`, { method: 'DELETE' }),
+    mutationFn: (id: number) => apiRequest('DELETE', `/api/integration-libraries/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/integration-libraries'] });
       toast({ title: "Success", description: "Integration library deleted successfully" });
@@ -87,11 +84,11 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
   };
 
   const getLibraryEndpoints = (libraryId: number) => {
-    return endpoints.filter(endpoint => endpoint.libraryId === libraryId);
+    return (endpoints as IntegrationEndpoint[]).filter((endpoint: IntegrationEndpoint) => endpoint.libraryId === libraryId);
   };
 
   const getLibraryCredentials = (libraryId: number) => {
-    return credentials.filter(credential => credential.libraryId === libraryId);
+    return (credentials as IntegrationCredential[]).filter((credential: IntegrationCredential) => credential.libraryId === libraryId);
   };
 
   const handleDelete = (id: number) => {
@@ -195,7 +192,7 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Total Libraries</p>
-                <p className="text-2xl font-bold">{libraries.length}</p>
+                <p className="text-2xl font-bold">{(libraries as IntegrationLibrary[]).length}</p>
               </div>
               <Code className="h-8 w-8 text-blue-500" />
             </div>
@@ -206,7 +203,7 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Active Endpoints</p>
-                <p className="text-2xl font-bold">{endpoints.length}</p>
+                <p className="text-2xl font-bold">{(endpoints as IntegrationEndpoint[]).length}</p>
               </div>
               <Globe className="h-8 w-8 text-green-500" />
             </div>
@@ -217,7 +214,7 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Credentials</p>
-                <p className="text-2xl font-bold">{credentials.length}</p>
+                <p className="text-2xl font-bold">{(credentials as IntegrationCredential[]).length}</p>
               </div>
               <Key className="h-8 w-8 text-purple-500" />
             </div>
@@ -228,7 +225,7 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Production Ready</p>
-                <p className="text-2xl font-bold">{libraries.filter(l => l.status === 'production').length}</p>
+                <p className="text-2xl font-bold">{(libraries as IntegrationLibrary[]).filter((l: IntegrationLibrary) => l.status === 'production').length}</p>
               </div>
               <Shield className="h-8 w-8 text-emerald-500" />
             </div>
@@ -237,7 +234,7 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
       </div>
 
       <div className="grid grid-cols-1 gap-6">
-        {libraries.map((library) => {
+        {(libraries as IntegrationLibrary[]).map((library: IntegrationLibrary) => {
           const libraryEndpoints = getLibraryEndpoints(library.id);
           const libraryCredentials = getLibraryCredentials(library.id);
           
@@ -301,7 +298,7 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {libraryEndpoints.map((endpoint) => (
+                          {libraryEndpoints.map((endpoint: IntegrationEndpoint) => (
                             <TableRow key={endpoint.id}>
                               <TableCell>
                                 <Badge variant="outline" className="font-mono text-xs">
@@ -323,7 +320,7 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
                               </TableCell>
                               <TableCell>
                                 <div className="flex flex-wrap gap-1">
-                                  {endpoint.permissions?.slice(0, 2).map((permission, idx) => (
+                                  {endpoint.permissions?.slice(0, 2).map((permission: string, idx: number) => (
                                     <Badge key={idx} variant="outline" className="text-xs">
                                       {permission}
                                     </Badge>
@@ -360,7 +357,7 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {libraryCredentials.map((credential) => (
+                          {libraryCredentials.map((credential: IntegrationCredential) => (
                             <TableRow key={credential.id}>
                               <TableCell>
                                 <Badge variant="outline">
@@ -373,7 +370,7 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
                               </TableCell>
                               <TableCell>
                                 <div className="flex flex-wrap gap-1">
-                                  {credential.scopes?.slice(0, 1).map((scope, idx) => (
+                                  {credential.scopes?.slice(0, 1).map((scope: string, idx: number) => (
                                     <Badge key={idx} variant="outline" className="text-xs">
                                       {scope}
                                     </Badge>
@@ -432,7 +429,7 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
                             <div>
                               <span className="text-sm text-gray-600">Dependencies:</span>
                               <div className="flex flex-wrap gap-1 mt-1">
-                                {library.dependencies.map((dep, idx) => (
+                                {library.dependencies.map((dep: string, idx: number) => (
                                   <Badge key={idx} variant="outline" className="text-xs">
                                     {dep}
                                   </Badge>
@@ -444,7 +441,7 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
                             <div>
                               <span className="text-sm text-gray-600">Environment Variables:</span>
                               <div className="flex flex-wrap gap-1 mt-1">
-                                {library.environmentVariables.map((env, idx) => (
+                                {library.environmentVariables.map((env: string, idx: number) => (
                                   <Badge key={idx} variant="outline" className="text-xs font-mono">
                                     {env}
                                   </Badge>
@@ -463,7 +460,7 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
         })}
       </div>
 
-      {libraries.length === 0 && (
+      {(libraries as IntegrationLibrary[]).length === 0 && (
         <Card>
           <CardContent className="text-center py-12">
             <Code className="h-12 w-12 text-gray-400 mx-auto mb-4" />
