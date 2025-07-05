@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { 
   Server, 
   Database, 
@@ -23,7 +24,8 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
-  Activity
+  Activity,
+  ChevronDown
 } from "lucide-react";
 import type { Brand } from "@/lib/types";
 import ServiceDependencyMap from "@/components/service-dependency-map";
@@ -408,36 +410,46 @@ export default function ServiceManagement({ selectedBrand }: ServiceManagementPr
                     </div>
                   </div>
                   {ci.attributes && (
-                    <div className="mt-3 p-3 bg-muted rounded-lg">
-                      <p className="text-sm font-medium mb-2">Configuration Details</p>
-                      <pre className="text-xs text-muted-foreground whitespace-pre-wrap">
-                        {JSON.stringify(JSON.parse(ci.attributes || '{}'), null, 2)}
-                      </pre>
-                    </div>
+                    <Collapsible>
+                      <CollapsibleTrigger className="flex items-center justify-between w-full mt-3 p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors">
+                        <p className="text-sm font-medium">DSC Configuration Details</p>
+                        <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:transform data-[state=open]:rotate-180" />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="mt-2 p-3 bg-muted/50 rounded-lg border">
+                        <pre className="text-xs text-muted-foreground whitespace-pre-wrap overflow-auto max-h-96">
+                          {JSON.stringify(JSON.parse(ci.attributes || '{}'), null, 2)}
+                        </pre>
+                      </CollapsibleContent>
+                    </Collapsible>
                   )}
                   {ci.secureBaseline && (
-                    <div className="mt-3 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Shield className="h-4 w-4 text-green-600" />
-                        <p className="text-sm font-medium text-green-800 dark:text-green-200">Security Baseline Configuration</p>
-                      </div>
-                      <div className="space-y-2">
-                        {Object.entries(JSON.parse(ci.secureBaseline)).map(([category, controls]: [string, any]) => (
-                          <div key={category} className="space-y-1">
-                            <p className="text-xs font-medium text-green-700 dark:text-green-300 capitalize">
-                              {category.replace(/_/g, ' ')}
-                            </p>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-1 ml-2">
-                              {Object.entries(controls).map(([control, value]: [string, any]) => (
-                                <div key={control} className="text-xs text-green-600 dark:text-green-400">
-                                  <span className="font-medium">{control.replace(/_/g, ' ')}:</span> {value}
-                                </div>
-                              ))}
+                    <Collapsible>
+                      <CollapsibleTrigger className="flex items-center justify-between w-full mt-3 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-950/30 transition-colors">
+                        <div className="flex items-center space-x-2">
+                          <Shield className="h-4 w-4 text-green-600" />
+                          <p className="text-sm font-medium text-green-800 dark:text-green-200">Security Baseline Configuration</p>
+                        </div>
+                        <ChevronDown className="h-4 w-4 text-green-600 transition-transform data-[state=open]:transform data-[state=open]:rotate-180" />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="mt-2 p-3 bg-green-50/50 dark:bg-green-950/10 border border-green-200 dark:border-green-800 rounded-lg">
+                        <div className="space-y-2 max-h-96 overflow-auto">
+                          {Object.entries(JSON.parse(ci.secureBaseline)).map(([category, controls]: [string, any]) => (
+                            <div key={category} className="space-y-1">
+                              <p className="text-xs font-medium text-green-700 dark:text-green-300 capitalize">
+                                {category.replace(/_/g, ' ')}
+                              </p>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-1 ml-2">
+                                {Object.entries(controls).map(([control, value]: [string, any]) => (
+                                  <div key={control} className="text-xs text-green-600 dark:text-green-400">
+                                    <span className="font-medium">{control.replace(/_/g, ' ')}:</span> {value}
+                                  </div>
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                          ))}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
                   )}
                 </CardContent>
               </Card>
