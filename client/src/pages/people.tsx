@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Users, Building, Briefcase, UserCheck } from "lucide-react";
+import { Plus, Users, Building, Briefcase, UserCheck, Globe } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -32,10 +32,19 @@ interface User {
   updatedAt?: Date;
 }
 
+interface Corporate {
+  id: number;
+  name: string;
+  description?: string;
+  brand: string;
+  createdAt?: Date;
+}
+
 interface Division {
   id: number;
   name: string;
   description?: string;
+  corporateId?: number;
   brand?: string;
   createdAt?: Date;
 }
@@ -71,6 +80,15 @@ export default function People({ selectedBrand }: PeopleProps) {
       const response = await fetch(`/api/users?brand=${selectedBrand}`);
       if (!response.ok) throw new Error('Failed to fetch users');
       return response.json() as Promise<User[]>;
+    }
+  });
+
+  const { data: corporates, isLoading: corporatesLoading } = useQuery({
+    queryKey: ['/api/corporates', selectedBrand],
+    queryFn: async () => {
+      const response = await fetch(`/api/corporates?brand=${selectedBrand}`);
+      if (!response.ok) throw new Error('Failed to fetch corporates');
+      return response.json() as Promise<Corporate[]>;
     }
   });
 
@@ -178,8 +196,9 @@ export default function People({ selectedBrand }: PeopleProps) {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="corporates">Corporates</TabsTrigger>
           <TabsTrigger value="divisions">Divisions</TabsTrigger>
           <TabsTrigger value="departments">Departments</TabsTrigger>
           <TabsTrigger value="personas">Personas</TabsTrigger>
@@ -232,6 +251,42 @@ export default function People({ selectedBrand }: PeopleProps) {
           </Card>
         </TabsContent>
 
+        <TabsContent value="corporates">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="w-5 h-5" />
+                Corporate Entities ({corporates?.length || 0})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {corporatesLoading ? (
+                <p>Loading corporates...</p>
+              ) : corporates?.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Globe className="mx-auto w-12 h-12 mb-4 text-gray-300" />
+                  <p>No corporate entities found for {selectedBrand === 'all' ? 'all brands' : selectedBrand}</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {corporates?.map((corporate) => (
+                    <div key={corporate.id} className="border rounded-lg p-4">
+                      <h3 className="font-semibold mb-2">{corporate.name}</h3>
+                      {corporate.description && <p className="text-sm text-gray-600 mb-2">{corporate.description}</p>}
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline" className="capitalize">{corporate.brand}</Badge>
+                        <div className="text-xs text-gray-400">
+                          {divisions?.filter(d => d.corporateId === corporate.id).length || 0} divisions
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="divisions">
           <Card>
             <CardHeader>
@@ -250,13 +305,23 @@ export default function People({ selectedBrand }: PeopleProps) {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {divisions?.map((division) => (
-                    <div key={division.id} className="border rounded-lg p-4">
-                      <h3 className="font-semibold mb-2">{division.name}</h3>
-                      {division.description && <p className="text-sm text-gray-600 mb-2">{division.description}</p>}
-                      <Badge variant="outline">{division.brand || 'all'}</Badge>
-                    </div>
-                  ))}
+                  {divisions?.map((division) => {
+                    const corporate = corporates?.find(c => c.id === division.corporateId);
+                    return (
+                      <div key={division.id} className="border rounded-lg p-4">
+                        <h3 className="font-semibold mb-2">{division.name}</h3>
+                        {division.description && <p className="text-sm text-gray-600 mb-2">{division.description}</p>}
+                        <div className="flex items-center justify-between">
+                          <Badge variant="outline">{division.brand || 'all'}</Badge>
+                          {corporate && (
+                            <div className="text-xs text-gray-400">
+                              Corporate: {corporate.name}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>

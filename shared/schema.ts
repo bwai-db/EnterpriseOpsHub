@@ -3,10 +3,19 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Organizational Structure Tables
+export const corporates = pgTable("corporates", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  brand: text("brand").notNull(), // blorcs, shaypops
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const divisions = pgTable("divisions", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
+  corporateId: integer("corporate_id").references(() => corporates.id),
   brand: text("brand"), // blorcs, shaypops, all
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -317,6 +326,11 @@ export const serviceLevelAgreements = pgTable("service_level_agreements", {
 });
 
 // Insert schemas
+export const insertCorporateSchema = createInsertSchema(corporates).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertDivisionSchema = createInsertSchema(divisions).omit({
   id: true,
   createdAt: true,
@@ -433,6 +447,9 @@ export const insertServiceLevelAgreementSchema = createInsertSchema(serviceLevel
 });
 
 // Types
+export type InsertCorporate = z.infer<typeof insertCorporateSchema>;
+export type Corporate = typeof corporates.$inferSelect;
+
 export type InsertDivision = z.infer<typeof insertDivisionSchema>;
 export type Division = typeof divisions.$inferSelect;
 

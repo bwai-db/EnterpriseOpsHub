@@ -29,12 +29,13 @@ This is a full-stack enterprise operations management platform built with React,
 ## Key Components
 
 ### Data Models
-The system manages thirteen core entities with organizational structure:
+The system manages fourteen core entities with hierarchical organizational structure:
 1. **Users**: Enhanced user management with EntraID integration
-2. **Divisions**: Top-level organizational divisions (Technology, Operations, Marketing, HR)
-3. **Departments**: Departments within divisions (IT Infrastructure, Software Development, etc.)
-4. **Functions**: Specific job functions within departments
-5. **Personas**: Role-based permissions and access control
+2. **Corporates**: Top-level corporate entities (Blorcs Corporation, Shaypops Inc.)
+3. **Divisions**: Organizational divisions under corporate entities (Technology, Operations, Marketing, HR)
+4. **Departments**: Departments within divisions (IT Infrastructure, Software Development, etc.)
+5. **Functions**: Specific job functions within departments
+6. **Personas**: Role-based permissions and access control
 6. **Vendors**: Software, hardware, cloud, and manufacturing vendor tracking
 7. **Licenses**: Software license lifecycle management
 8. **Incidents**: ITIL incident management system
@@ -133,6 +134,7 @@ Changelog:
 - July 05, 2025. Added comprehensive retail operations management with stores, inventory, sales, and staff tracking
 - July 05, 2025. Implemented ITIL Service Management with CMDB integration for M365, Azure, Intune, Hybrid Endpoint, Identity, Print, CAD Workstation, and 3D Printing services
 - July 05, 2025. Added interactive service dependency mapping with visual relationship tracking and impact analysis capabilities
+- July 05, 2025. Added Corporate organizational level above Divisions to enable hierarchical brand separation between Blorcs and Shaypops with complete CRUD operations and UI integration
 ```
 
 ## User Preferences

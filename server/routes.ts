@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { 
   insertVendorSchema, insertLicenseSchema, insertIncidentSchema, insertCloudServiceSchema,
-  insertDivisionSchema, insertDepartmentSchema, insertFunctionSchema, insertPersonaSchema, insertUserSchema,
+  insertCorporateSchema, insertDivisionSchema, insertDepartmentSchema, insertFunctionSchema, insertPersonaSchema, insertUserSchema,
   insertStoreSchema, insertStoreInventorySchema, insertStoreSalesSchema, insertStoreStaffSchema,
   insertServiceCategorySchema, insertItilServiceSchema, insertConfigurationItemSchema,
   insertChangeRequestSchema, insertServiceLevelAgreementSchema
@@ -11,11 +11,78 @@ import {
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Corporates
+  app.get("/api/corporates", async (req, res) => {
+    try {
+      const { brand } = req.query;
+      const corporates = await storage.getCorporates(brand as string);
+      res.json(corporates);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch corporates" });
+    }
+  });
+
+  app.get("/api/corporates/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const corporate = await storage.getCorporate(id);
+      if (!corporate) {
+        return res.status(404).json({ message: "Corporate not found" });
+      }
+      res.json(corporate);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch corporate" });
+    }
+  });
+
+  app.post("/api/corporates", async (req, res) => {
+    try {
+      const corporateData = insertCorporateSchema.parse(req.body);
+      const corporate = await storage.createCorporate(corporateData);
+      res.status(201).json(corporate);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid corporate data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create corporate" });
+    }
+  });
+
+  app.put("/api/corporates/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const corporateData = insertCorporateSchema.partial().parse(req.body);
+      const corporate = await storage.updateCorporate(id, corporateData);
+      res.json(corporate);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid corporate data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update corporate" });
+    }
+  });
+
+  app.delete("/api/corporates/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteCorporate(id);
+      if (!success) {
+        return res.status(404).json({ message: "Corporate not found" });
+      }
+      res.status(204).end();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete corporate" });
+    }
+  });
+
   // Divisions
   app.get("/api/divisions", async (req, res) => {
     try {
-      const { brand } = req.query;
-      const divisions = await storage.getDivisions(brand as string);
+      const { brand, corporateId } = req.query;
+      const divisions = await storage.getDivisions(
+        brand as string,
+        corporateId ? parseInt(corporateId as string) : undefined
+      );
       res.json(divisions);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch divisions" });

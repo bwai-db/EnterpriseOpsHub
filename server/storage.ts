@@ -1,6 +1,6 @@
 import { 
   users, vendors, licenses, incidents, cloudServices,
-  divisions, departments, functions, personas,
+  corporates, divisions, departments, functions, personas,
   stores, storeInventory, storeSales, storeStaff,
   serviceCategories, itilServices, configurationItems,
   serviceRelationships, ciRelationships, changeRequests, serviceLevelAgreements,
@@ -9,6 +9,7 @@ import {
   type License, type InsertLicense,
   type Incident, type InsertIncident,
   type CloudService, type InsertCloudService,
+  type Corporate, type InsertCorporate,
   type Division, type InsertDivision,
   type Department, type InsertDepartment,
   type Function, type InsertFunction,
@@ -30,7 +31,13 @@ import { eq } from "drizzle-orm";
 
 export interface IStorage {
   // Organizational Structure
-  getDivisions(brand?: string): Promise<Division[]>;
+  getCorporates(brand?: string): Promise<Corporate[]>;
+  getCorporate(id: number): Promise<Corporate | undefined>;
+  createCorporate(corporate: InsertCorporate): Promise<Corporate>;
+  updateCorporate(id: number, corporate: Partial<InsertCorporate>): Promise<Corporate>;
+  deleteCorporate(id: number): Promise<boolean>;
+
+  getDivisions(brand?: string, corporateId?: number): Promise<Division[]>;
   getDivision(id: number): Promise<Division | undefined>;
   createDivision(division: InsertDivision): Promise<Division>;
   updateDivision(id: number, division: Partial<InsertDivision>): Promise<Division>;
@@ -157,11 +164,50 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   // Organizational Structure
-  async getDivisions(brand?: string): Promise<Division[]> {
+  async getCorporates(brand?: string): Promise<Corporate[]> {
     if (brand && brand !== "all") {
-      return await db.select().from(divisions).where(eq(divisions.brand, brand));
+      return await db.select().from(corporates).where(eq(corporates.brand, brand));
     }
-    return await db.select().from(divisions);
+    return await db.select().from(corporates);
+  }
+
+  async getCorporate(id: number): Promise<Corporate | undefined> {
+    const [corporate] = await db.select().from(corporates).where(eq(corporates.id, id));
+    return corporate || undefined;
+  }
+
+  async createCorporate(insertCorporate: InsertCorporate): Promise<Corporate> {
+    const [corporate] = await db
+      .insert(corporates)
+      .values(insertCorporate)
+      .returning();
+    return corporate;
+  }
+
+  async updateCorporate(id: number, updateData: Partial<InsertCorporate>): Promise<Corporate> {
+    const [corporate] = await db
+      .update(corporates)
+      .set(updateData)
+      .where(eq(corporates.id, id))
+      .returning();
+    return corporate;
+  }
+
+  async deleteCorporate(id: number): Promise<boolean> {
+    const result = await db.delete(corporates).where(eq(corporates.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async getDivisions(brand?: string, corporateId?: number): Promise<Division[]> {
+    let query = db.select().from(divisions);
+    
+    if (corporateId) {
+      query = query.where(eq(divisions.corporateId, corporateId));
+    } else if (brand && brand !== "all") {
+      query = query.where(eq(divisions.brand, brand));
+    }
+    
+    return await query;
   }
 
   async getDivision(id: number): Promise<Division | undefined> {
