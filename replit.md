@@ -116,7 +116,9 @@ The system manages five core entities:
 
 ```
 Changelog:
-- July 05, 2025. Initial setup
+- July 05, 2025. Initial setup with React/TypeScript frontend and Node.js backend
+- July 05, 2025. Added PostgreSQL database integration with Drizzle ORM
+- July 05, 2025. Replaced in-memory storage with persistent database storage
 ```
 
 ## User Preferences
