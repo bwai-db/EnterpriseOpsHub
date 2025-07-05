@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,8 @@ import {
   CheckCircle,
   Clock,
   Activity,
-  ChevronDown
+  ChevronDown,
+  Trash2
 } from "lucide-react";
 import type { Brand } from "@/lib/types";
 import ServiceDependencyMap from "@/components/service-dependency-map";
@@ -39,6 +41,7 @@ export default function ServiceManagement({ selectedBrand }: ServiceManagementPr
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedClass, setSelectedClass] = useState("all");
   const [selectedService, setSelectedService] = useState<number | null>(null);
+  const queryClient = useQueryClient();
 
   // Fetch service categories
   const { data: categories = [] } = useQuery({
@@ -78,6 +81,22 @@ export default function ServiceManagement({ selectedBrand }: ServiceManagementPr
   const { data: ciRelationships = [] } = useQuery({
     queryKey: ['/api/ci-relationships'],
     queryFn: () => fetch('/api/ci-relationships').then(res => res.json())
+  });
+
+  // Delete service mutation
+  const deleteServiceMutation = useMutation({
+    mutationFn: async (serviceId: number) => {
+      const response = await fetch(`/api/itil-services/${serviceId}`, {
+        method: 'DELETE'
+      });
+      if (!response.ok) {
+        throw new Error('Failed to delete service');
+      }
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/itil-services'] });
+    }
   });
 
   const getServiceIcon = (serviceCode: string) => {
@@ -277,9 +296,20 @@ export default function ServiceManagement({ selectedBrand }: ServiceManagementPr
                               </div>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-sm text-muted-foreground">Owner</p>
-                            <p className="text-sm font-medium">{service.serviceOwner}</p>
+                          <div className="flex items-center space-x-3">
+                            <div className="text-right">
+                              <p className="text-sm text-muted-foreground">Owner</p>
+                              <p className="text-sm font-medium">{service.serviceOwner}</p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deleteServiceMutation.mutate(service.id)}
+                              disabled={deleteServiceMutation.isPending}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
                       ))}

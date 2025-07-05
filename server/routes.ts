@@ -716,6 +716,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/itil-services/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteItilService(id);
+      if (!success) {
+        return res.status(404).json({ message: "Service not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete ITIL service" });
+    }
+  });
+
   // Configuration Items (CMDB)
   app.get("/api/configuration-items", async (req, res) => {
     try {
