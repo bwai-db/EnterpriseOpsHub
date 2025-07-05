@@ -11,7 +11,10 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  Zap
+  Zap,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw
 } from "lucide-react";
 
 interface ServiceDependencyMapProps {
@@ -31,6 +34,11 @@ export default function ServiceDependencyMap({
 }: ServiceDependencyMapProps) {
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"services" | "config">("services");
+  const [zoom, setZoom] = useState(1);
+  const [panX, setPanX] = useState(0);
+  const [panY, setPanY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const getStatusColor = (status: string) => {
@@ -150,65 +158,69 @@ export default function ServiceDependencyMap({
     
     ctx.save();
     
+    // Apply zoom and pan transformations
+    const transformedX = (x + panX) * zoom;
+    const transformedY = (y + panY) * zoom;
+    
     if (type === 'service') {
       // Service node
-      const width = 150;
-      const height = 60;
+      const width = 150 * zoom;
+      const height = 60 * zoom;
       
       // Background
       ctx.fillStyle = selectedNode === node.id ? '#1f2937' : '#f9fafb';
-      ctx.fillRect(x, y, width, height);
+      ctx.fillRect(transformedX, transformedY, width, height);
       
       // Border based on criticality
       ctx.strokeStyle = getCriticalityColor(criticality);
-      ctx.lineWidth = 2;
-      ctx.strokeRect(x, y, width, height);
+      ctx.lineWidth = 2 * zoom;
+      ctx.strokeRect(transformedX, transformedY, width, height);
       
       // Status indicator
       ctx.fillStyle = getStatusColor(status);
-      ctx.fillRect(x + width - 10, y, 10, height);
+      ctx.fillRect(transformedX + width - (10 * zoom), transformedY, 10 * zoom, height);
       
       // Text
       ctx.fillStyle = '#1f2937';
-      ctx.font = '12px sans-serif';
+      ctx.font = `${12 * zoom}px sans-serif`;
       ctx.textAlign = 'center';
-      ctx.fillText(label, x + width/2, y + height/2 + 4);
+      ctx.fillText(label, transformedX + width/2, transformedY + height/2 + (4 * zoom));
       
     } else if (type === 'config-item') {
       // Configuration item node
-      const width = 100;
-      const height = 40;
+      const width = 100 * zoom;
+      const height = 40 * zoom;
       
       // Background
       ctx.fillStyle = selectedNode === node.id ? '#e5e7eb' : '#ffffff';
-      ctx.fillRect(x, y, width, height);
+      ctx.fillRect(transformedX, transformedY, width, height);
       
       // Border based on CI class
       ctx.strokeStyle = getStatusColor(status);
-      ctx.lineWidth = 1;
-      ctx.strokeRect(x, y, width, height);
+      ctx.lineWidth = 1 * zoom;
+      ctx.strokeRect(transformedX, transformedY, width, height);
       
       // Text
       ctx.fillStyle = '#374151';
-      ctx.font = '10px sans-serif';
+      ctx.font = `${10 * zoom}px sans-serif`;
       ctx.textAlign = 'center';
       
       // Truncate long labels
       const truncatedLabel = label.length > 12 ? label.substring(0, 12) + '...' : label;
-      ctx.fillText(truncatedLabel, x + width/2, y + height/2 + 3);
+      ctx.fillText(truncatedLabel, transformedX + width/2, transformedY + height/2 + (3 * zoom));
       
     } else if (type === 'service-header') {
       // Service header for CI view
-      const width = node.width || 300;
-      const height = node.height || 40;
+      const width = (node.width || 300) * zoom;
+      const height = (node.height || 40) * zoom;
       
       ctx.fillStyle = '#3b82f6';
-      ctx.fillRect(x, y, width, height);
+      ctx.fillRect(transformedX, transformedY, width, height);
       
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 14px sans-serif';
+      ctx.font = `bold ${14 * zoom}px sans-serif`;
       ctx.textAlign = 'left';
-      ctx.fillText(label, x + 10, y + height/2 + 4);
+      ctx.fillText(label, transformedX + (10 * zoom), transformedY + height/2 + (4 * zoom));
     }
     
     ctx.restore();
@@ -222,14 +234,15 @@ export default function ServiceDependencyMap({
     
     ctx.save();
     
-    const fromX = fromNode.x + 75; // Center of node
-    const fromY = fromNode.y + 30;
-    const toX = toNode.x + 75;
-    const toY = toNode.y + 30;
+    // Apply zoom and pan transformations
+    const fromX = (fromNode.x + 75 + panX) * zoom; // Center of node
+    const fromY = (fromNode.y + 30 + panY) * zoom;
+    const toX = (toNode.x + 75 + panX) * zoom;
+    const toY = (toNode.y + 30 + panY) * zoom;
     
     // Draw arrow
     ctx.strokeStyle = '#6b7280';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2 * zoom;
     ctx.beginPath();
     ctx.moveTo(fromX, fromY);
     ctx.lineTo(toX, toY);
@@ -237,7 +250,7 @@ export default function ServiceDependencyMap({
     
     // Draw arrowhead
     const angle = Math.atan2(toY - fromY, toX - fromX);
-    const headLength = 10;
+    const headLength = 10 * zoom;
     
     ctx.beginPath();
     ctx.moveTo(toX, toY);
@@ -257,9 +270,9 @@ export default function ServiceDependencyMap({
     const midY = (fromY + toY) / 2;
     
     ctx.fillStyle = '#374151';
-    ctx.font = '10px sans-serif';
+    ctx.font = `${10 * zoom}px sans-serif`;
     ctx.textAlign = 'center';
-    ctx.fillText(edge.label, midX, midY - 5);
+    ctx.fillText(edge.label, midX, midY - (5 * zoom));
     
     ctx.restore();
   };
@@ -282,15 +295,72 @@ export default function ServiceDependencyMap({
     // Draw nodes
     nodes.forEach(node => renderNode(node, ctx));
     
-  }, [services, configItems, relationships, viewMode, selectedNode]);
+  }, [services, configItems, relationships, viewMode, selectedNode, zoom, panX, panY]);
+
+  const handleWheel = (event: React.WheelEvent<HTMLCanvasElement>) => {
+    event.preventDefault();
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = event.clientX - rect.left;
+    const mouseY = event.clientY - rect.top;
+    
+    // Calculate zoom
+    const zoomFactor = event.deltaY > 0 ? 0.9 : 1.1;
+    const newZoom = Math.max(0.1, Math.min(3, zoom * zoomFactor));
+    
+    // Calculate pan to zoom toward mouse position
+    const deltaZoom = newZoom - zoom;
+    const newPanX = panX - (mouseX / zoom) * deltaZoom;
+    const newPanY = panY - (mouseY / zoom) * deltaZoom;
+    
+    setZoom(newZoom);
+    setPanX(newPanX);
+    setPanY(newPanY);
+  };
+
+  const handleMouseDown = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    setIsDragging(true);
+    setLastMousePos({ x: event.clientX, y: event.clientY });
+  };
+
+  const handleMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDragging) return;
+    
+    const deltaX = event.clientX - lastMousePos.x;
+    const deltaY = event.clientY - lastMousePos.y;
+    
+    setPanX(panX + deltaX / zoom);
+    setPanY(panY + deltaY / zoom);
+    
+    setLastMousePos({ x: event.clientX, y: event.clientY });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const resetView = () => {
+    setZoom(1);
+    setPanX(0);
+    setPanY(0);
+  };
 
   const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    if (isDragging) return; // Don't handle clicks while dragging
+    
     const canvas = canvasRef.current;
     if (!canvas) return;
     
     const rect = canvas.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
+    
+    // Transform click coordinates to canvas space
+    const canvasX = (x / zoom) - panX;
+    const canvasY = (y / zoom) - panY;
     
     const { nodes } = buildDependencyGraph();
     
@@ -299,8 +369,8 @@ export default function ServiceDependencyMap({
       const nodeWidth = node.type === 'service' ? 150 : node.type === 'service-header' ? 300 : 100;
       const nodeHeight = node.type === 'service' ? 60 : node.type === 'service-header' ? 40 : 40;
       
-      return x >= node.x && x <= node.x + nodeWidth &&
-             y >= node.y && y <= node.y + nodeHeight;
+      return canvasX >= node.x && canvasX <= node.x + nodeWidth &&
+             canvasY >= node.y && canvasY <= node.y + nodeHeight;
     });
     
     if (clickedNode) {
@@ -342,6 +412,20 @@ export default function ServiceDependencyMap({
               <SelectItem value="config">Configuration View</SelectItem>
             </SelectContent>
           </Select>
+          <div className="flex items-center space-x-1">
+            <Button variant="outline" size="sm" onClick={() => setZoom(Math.min(3, zoom * 1.2))}>
+              <ZoomIn className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setZoom(Math.max(0.1, zoom * 0.8))}>
+              <ZoomOut className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="sm" onClick={resetView}>
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+            <div className="text-xs text-muted-foreground px-2">
+              {Math.round(zoom * 100)}%
+            </div>
+          </div>
           <Button variant="outline" size="sm">
             <GitBranch className="h-4 w-4 mr-2" />
             Auto Layout
@@ -358,7 +442,12 @@ export default function ServiceDependencyMap({
                 width={800}
                 height={600}
                 onClick={handleCanvasClick}
-                className="w-full border cursor-pointer"
+                onWheel={handleWheel}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                className="w-full border cursor-grab active:cursor-grabbing"
                 style={{ maxHeight: '600px' }}
               />
             </CardContent>
