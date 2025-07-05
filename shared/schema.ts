@@ -85,7 +85,55 @@ export const vendors = pgTable("vendors", {
   monthlyCost: decimal("monthly_cost", { precision: 10, scale: 2 }),
   description: text("description"),
   brand: text("brand"), // blorcs, shaypops, all
+  
+  // Enhanced metadata fields
+  website: text("website"),
+  hqAddress: text("hq_address"),
+  hqCity: text("hq_city"),
+  hqState: text("hq_state"),
+  hqZipCode: text("hq_zip_code"),
+  hqCountry: text("hq_country"),
+  accountManager: text("account_manager"),
+  accountManagerEmail: text("account_manager_email"),
+  accountManagerPhone: text("account_manager_phone"),
+  
+  // GDAP and compliance
+  providesGDAP: boolean("provides_gdap").default(false),
+  gdapStatus: text("gdap_status").default("unknown"), // compliant, non_compliant, unknown, pending
+  complianceNotes: text("compliance_notes"),
+  
+  // Entra B2B integration
+  entraB2BConfigured: boolean("entra_b2b_configured").default(false),
+  externalTenantId: text("external_tenant_id"),
+  
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Vendor team members and contacts
+export const vendorTeamMembers = pgTable("vendor_team_members", {
+  id: serial("id").primaryKey(),
+  vendorId: integer("vendor_id").references(() => vendors.id),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  title: text("title"),
+  department: text("department"),
+  isPrimary: boolean("is_primary").default(false),
+  
+  // Entra B2B integration
+  entraB2BUserId: text("entra_b2b_user_id"),
+  entraB2BStatus: text("entra_b2b_status").default("not_configured"), // invited, active, disabled, not_configured
+  lastLoginDate: timestamp("last_login_date"),
+  
+  // Access and permissions
+  accessLevel: text("access_level").default("read"), // read, write, admin
+  servicesAccess: text("services_access").array(), // array of service names they can access
+  
+  status: text("status").notNull().default("active"), // active, inactive, pending
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const licenses = pgTable("licenses", {
@@ -400,6 +448,13 @@ export const insertUserSchema = createInsertSchema(users).omit({
 export const insertVendorSchema = createInsertSchema(vendors).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
+});
+
+export const insertVendorTeamMemberSchema = createInsertSchema(vendorTeamMembers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 export const insertLicenseSchema = createInsertSchema(licenses).omit({
@@ -518,6 +573,9 @@ export type User = typeof users.$inferSelect;
 
 export type InsertVendor = z.infer<typeof insertVendorSchema>;
 export type Vendor = typeof vendors.$inferSelect;
+
+export type InsertVendorTeamMember = z.infer<typeof insertVendorTeamMemberSchema>;
+export type VendorTeamMember = typeof vendorTeamMembers.$inferSelect;
 
 export type InsertLicense = z.infer<typeof insertLicenseSchema>;
 export type License = typeof licenses.$inferSelect;

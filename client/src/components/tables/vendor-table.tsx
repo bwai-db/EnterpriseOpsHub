@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Building, Edit, Trash2, Plus } from "lucide-react";
+import { Building, Edit, Trash2, Plus, Shield, ShieldCheck, ShieldX, MapPin, User, ExternalLink } from "lucide-react";
 import type { Vendor } from "@shared/schema";
 
 interface VendorTableProps {
@@ -32,6 +32,7 @@ export default function VendorTable({ vendors, isLoading, onEdit, onDelete }: Ve
       cloud: "bg-purple-100 text-purple-800",
       security: "bg-red-100 text-red-800",
       manufacturing: "bg-green-100 text-green-800",
+      services: "bg-indigo-100 text-indigo-800",
     };
     
     return (
@@ -39,6 +40,48 @@ export default function VendorTable({ vendors, isLoading, onEdit, onDelete }: Ve
         {category}
       </Badge>
     );
+  };
+
+  const getGdapStatusBadge = (vendor: Vendor) => {
+    if (!vendor.providesGDAP) {
+      return (
+        <Badge variant="outline" className="text-red-600 border-red-200">
+          <ShieldX className="w-3 h-3 mr-1" />
+          No GDAP
+        </Badge>
+      );
+    }
+    
+    switch (vendor.gdapStatus) {
+      case "compliant":
+        return (
+          <Badge className="bg-green-100 text-green-800 border-green-200">
+            <ShieldCheck className="w-3 h-3 mr-1" />
+            GDAP Compliant
+          </Badge>
+        );
+      case "non_compliant":
+        return (
+          <Badge variant="outline" className="text-orange-600 border-orange-200">
+            <Shield className="w-3 h-3 mr-1" />
+            Non-Compliant
+          </Badge>
+        );
+      case "pending":
+        return (
+          <Badge variant="outline" className="text-yellow-600 border-yellow-200">
+            <Shield className="w-3 h-3 mr-1" />
+            Pending
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="outline" className="text-gray-600 border-gray-200">
+            <Shield className="w-3 h-3 mr-1" />
+            Unknown
+          </Badge>
+        );
+    }
   };
 
   const formatCurrency = (amount: string | null) => {
@@ -93,16 +136,16 @@ export default function VendorTable({ vendors, isLoading, onEdit, onDelete }: Ve
                     Vendor
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Category
+                    Category & Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                    GDAP Compliance
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Contract End
+                    Account Manager
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Monthly Cost
+                    Headquarters
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -112,28 +155,74 @@ export default function VendorTable({ vendors, isLoading, onEdit, onDelete }: Ve
               <tbody className="bg-white divide-y divide-gray-200">
                 {vendors.map((vendor) => (
                   <tr key={vendor.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4">
                       <div className="flex items-center">
                         <div className="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center">
                           <Building className="text-gray-600 w-5 h-5" />
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">{vendor.name}</div>
-                          <div className="text-sm text-gray-500">{vendor.type}</div>
+                          <div className="text-sm text-gray-500">{vendor.description}</div>
+                          {vendor.website && (
+                            <a 
+                              href={vendor.website} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-xs text-blue-600 hover:text-blue-800 inline-flex items-center mt-1"
+                            >
+                              <ExternalLink className="w-3 h-3 mr-1" />
+                              Website
+                            </a>
+                          )}
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {getCategoryBadge(vendor.category)}
+                      <div className="space-y-1">
+                        {getCategoryBadge(vendor.category)}
+                        {getStatusBadge(vendor.status)}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(vendor.status)}
+                      <div className="space-y-1">
+                        {getGdapStatusBadge(vendor)}
+                        {vendor.entraB2BConfigured && (
+                          <Badge variant="outline" className="text-green-600 border-green-200 text-xs">
+                            Entra B2B
+                          </Badge>
+                        )}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatDate(vendor.contractEnd)}
+                    <td className="px-6 py-4">
+                      {vendor.accountManager ? (
+                        <div className="space-y-1">
+                          <div className="text-sm font-medium text-gray-900 flex items-center">
+                            <User className="w-3 h-3 mr-1" />
+                            {vendor.accountManager}
+                          </div>
+                          {vendor.accountManagerEmail && (
+                            <div className="text-xs text-gray-500">{vendor.accountManagerEmail}</div>
+                          )}
+                          {vendor.accountManagerPhone && (
+                            <div className="text-xs text-gray-500">{vendor.accountManagerPhone}</div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-gray-400">No contact assigned</span>
+                      )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatCurrency(vendor.monthlyCost)}
+                    <td className="px-6 py-4">
+                      {vendor.hqCity ? (
+                        <div className="space-y-1">
+                          <div className="text-sm text-gray-900 flex items-center">
+                            <MapPin className="w-3 h-3 mr-1" />
+                            {vendor.hqCity}, {vendor.hqState}
+                          </div>
+                          <div className="text-xs text-gray-500">{vendor.hqCountry}</div>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-gray-400">Location not specified</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">

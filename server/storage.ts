@@ -1,5 +1,5 @@
 import { 
-  users, vendors, licenses, incidents, cloudServices,
+  users, vendors, vendorTeamMembers, licenses, incidents, cloudServices,
   corporates, divisions, departments, functions, personas,
   stores, storeInventory, storeSales, storeStaff,
   serviceCategories, itilServices, configurationItems,
@@ -7,6 +7,7 @@ import {
   distributionCenters, distributionCenterMetrics,
   type User, type InsertUser,
   type Vendor, type InsertVendor,
+  type VendorTeamMember, type InsertVendorTeamMember,
   type License, type InsertLicense,
   type Incident, type InsertIncident,
   type CloudService, type InsertCloudService,
@@ -80,6 +81,13 @@ export interface IStorage {
   createVendor(vendor: InsertVendor): Promise<Vendor>;
   updateVendor(id: number, vendor: Partial<InsertVendor>): Promise<Vendor>;
   deleteVendor(id: number): Promise<boolean>;
+
+  // Vendor Team Members
+  getVendorTeamMembers(vendorId?: number): Promise<VendorTeamMember[]>;
+  getVendorTeamMember(id: number): Promise<VendorTeamMember | undefined>;
+  createVendorTeamMember(member: InsertVendorTeamMember): Promise<VendorTeamMember>;
+  updateVendorTeamMember(id: number, member: Partial<InsertVendorTeamMember>): Promise<VendorTeamMember>;
+  deleteVendorTeamMember(id: number): Promise<boolean>;
 
   // Licenses
   getLicenses(brand?: string): Promise<License[]>;
@@ -467,6 +475,41 @@ export class DatabaseStorage implements IStorage {
 
   async deleteVendor(id: number): Promise<boolean> {
     const result = await db.delete(vendors).where(eq(vendors.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Vendor Team Members
+  async getVendorTeamMembers(vendorId?: number): Promise<VendorTeamMember[]> {
+    if (vendorId) {
+      return await db.select().from(vendorTeamMembers).where(eq(vendorTeamMembers.vendorId, vendorId));
+    }
+    return await db.select().from(vendorTeamMembers);
+  }
+
+  async getVendorTeamMember(id: number): Promise<VendorTeamMember | undefined> {
+    const [member] = await db.select().from(vendorTeamMembers).where(eq(vendorTeamMembers.id, id));
+    return member || undefined;
+  }
+
+  async createVendorTeamMember(insertMember: InsertVendorTeamMember): Promise<VendorTeamMember> {
+    const [member] = await db
+      .insert(vendorTeamMembers)
+      .values(insertMember)
+      .returning();
+    return member;
+  }
+
+  async updateVendorTeamMember(id: number, updateData: Partial<InsertVendorTeamMember>): Promise<VendorTeamMember> {
+    const [member] = await db
+      .update(vendorTeamMembers)
+      .set(updateData)
+      .where(eq(vendorTeamMembers.id, id))
+      .returning();
+    return member;
+  }
+
+  async deleteVendorTeamMember(id: number): Promise<boolean> {
+    const result = await db.delete(vendorTeamMembers).where(eq(vendorTeamMembers.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
   }
 

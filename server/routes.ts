@@ -284,6 +284,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Vendor Team Members
+  app.get("/api/vendor-team-members", async (req, res) => {
+    try {
+      const { vendorId } = req.query;
+      const members = await storage.getVendorTeamMembers(
+        vendorId ? parseInt(vendorId as string) : undefined
+      );
+      res.json(members);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch vendor team members" });
+    }
+  });
+
+  app.get("/api/vendor-team-members/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const member = await storage.getVendorTeamMember(id);
+      if (!member) {
+        return res.status(404).json({ message: "Team member not found" });
+      }
+      res.json(member);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch team member" });
+    }
+  });
+
+  app.post("/api/vendor-team-members", async (req, res) => {
+    try {
+      const memberData = req.body; // TODO: Add schema validation
+      const member = await storage.createVendorTeamMember(memberData);
+      res.status(201).json(member);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create team member" });
+    }
+  });
+
+  app.put("/api/vendor-team-members/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = req.body; // TODO: Add schema validation
+      const member = await storage.updateVendorTeamMember(id, updateData);
+      res.json(member);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update team member" });
+    }
+  });
+
+  app.delete("/api/vendor-team-members/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteVendorTeamMember(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Team member not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete team member" });
+    }
+  });
+
   // Licenses
   app.get("/api/licenses", async (req, res) => {
     try {
