@@ -87,23 +87,29 @@ export default function VendorForm({ vendor, onSuccess, selectedBrand }: VendorF
       });
       onSuccess();
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Update vendor error:", error);
       toast({
         title: "Error",
-        description: "Failed to update vendor",
+        description: error?.response?.data?.message || "Failed to update vendor",
         variant: "destructive",
       });
     },
   });
 
   const onSubmit = (data: VendorFormData) => {
-    // Convert date strings to Date objects
+    // Convert date strings to Date objects and clean up data
     const processedData = {
       ...data,
       contractStart: data.contractStart ? new Date(data.contractStart) : null,
       contractEnd: data.contractEnd ? new Date(data.contractEnd) : null,
       monthlyCost: data.monthlyCost || null,
+      contactEmail: data.contactEmail || null,
+      contactPhone: data.contactPhone || null,
+      description: data.description || null,
     };
+
+    console.log("Submitting vendor data:", processedData);
 
     if (vendor) {
       updateMutation.mutate(processedData);
