@@ -628,6 +628,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Service and CI Relationships
+  app.get("/api/service-relationships", async (req, res) => {
+    try {
+      const { serviceId } = req.query;
+      const relationships = await storage.getServiceRelationships(
+        serviceId ? parseInt(serviceId as string) : undefined
+      );
+      res.json(relationships);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch service relationships" });
+    }
+  });
+
+  app.get("/api/ci-relationships", async (req, res) => {
+    try {
+      const { ciId } = req.query;
+      const relationships = await storage.getCiRelationships(
+        ciId ? parseInt(ciId as string) : undefined
+      );
+      res.json(relationships);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch CI relationships" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

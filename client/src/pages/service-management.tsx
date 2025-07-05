@@ -20,6 +20,8 @@ import {
   ExternalLink
 } from "lucide-react";
 import type { Brand } from "@/lib/types";
+import ServiceDependencyMap from "@/components/service-dependency-map";
+import ImpactAnalysis from "@/components/impact-analysis";
 
 interface ServiceManagementProps {
   selectedBrand: Brand;
@@ -56,6 +58,18 @@ export default function ServiceManagement({ selectedBrand }: ServiceManagementPr
   const { data: changeRequests = [] } = useQuery({
     queryKey: ['/api/change-requests', selectedBrand],
     queryFn: () => fetch(`/api/change-requests?brand=${selectedBrand}`).then(res => res.json())
+  });
+
+  // Fetch service relationships
+  const { data: serviceRelationships = [] } = useQuery({
+    queryKey: ['/api/service-relationships'],
+    queryFn: () => fetch('/api/service-relationships').then(res => res.json())
+  });
+
+  // Fetch CI relationships
+  const { data: ciRelationships = [] } = useQuery({
+    queryKey: ['/api/ci-relationships'],
+    queryFn: () => fetch('/api/ci-relationships').then(res => res.json())
   });
 
   const getServiceIcon = (serviceCode: string) => {
@@ -122,6 +136,7 @@ export default function ServiceManagement({ selectedBrand }: ServiceManagementPr
           <TabsTrigger value="cmdb">Configuration Items</TabsTrigger>
           <TabsTrigger value="changes">Change Requests</TabsTrigger>
           <TabsTrigger value="dependencies">Service Dependencies</TabsTrigger>
+          <TabsTrigger value="impact">Impact Analysis</TabsTrigger>
         </TabsList>
 
         <TabsContent value="services" className="space-y-4">
@@ -306,21 +321,22 @@ export default function ServiceManagement({ selectedBrand }: ServiceManagementPr
         </TabsContent>
 
         <TabsContent value="dependencies" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Service Dependencies</CardTitle>
-              <CardDescription>
-                Visual representation of service relationships and dependencies
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <Database className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Service dependency mapping coming soon</p>
-                <p className="text-sm">Integration with service discovery and dependency analysis tools</p>
-              </div>
-            </CardContent>
-          </Card>
+          <ServiceDependencyMap
+            services={services}
+            configItems={configItems}
+            relationships={serviceRelationships}
+            onServiceSelect={(serviceId) => setSelectedService(serviceId)}
+            selectedService={selectedService || undefined}
+          />
+        </TabsContent>
+
+        <TabsContent value="impact" className="space-y-4">
+          <ImpactAnalysis
+            services={services}
+            configItems={configItems}
+            relationships={serviceRelationships}
+            selectedService={selectedService || undefined}
+          />
         </TabsContent>
       </Tabs>
     </div>
