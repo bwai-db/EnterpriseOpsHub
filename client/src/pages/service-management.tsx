@@ -17,7 +17,13 @@ import {
   RefreshCw,
   Search,
   Filter,
-  ExternalLink
+  ExternalLink,
+  TrendingUp,
+  TrendingDown,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  Activity
 } from "lucide-react";
 import type { Brand } from "@/lib/types";
 import ServiceDependencyMap from "@/components/service-dependency-map";
@@ -104,9 +110,60 @@ export default function ServiceManagement({ selectedBrand }: ServiceManagementPr
     return colors[status as keyof typeof colors] || colors.operational;
   };
 
-  const filteredConfigItems = configItems.filter(item =>
+  const filteredConfigItems = configItems.filter((item: any) =>
     item.ciName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.ciType.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Calculate KPIs for each tab
+  const serviceKPIs = {
+    total: services.length,
+    operational: services.filter((s: any) => s.status === 'operational').length,
+    planned: services.filter((s: any) => s.status === 'planned').length,
+    retired: services.filter((s: any) => s.status === 'retired').length,
+    criticalServices: services.filter((s: any) => s.criticality === 'critical').length,
+    highServices: services.filter((s: any) => s.criticality === 'high').length
+  };
+
+  const configItemKPIs = {
+    total: configItems.length,
+    operational: configItems.filter((ci: any) => ci.status === 'operational').length,
+    maintenance: configItems.filter((ci: any) => ci.status === 'maintenance').length,
+    retired: configItems.filter((ci: any) => ci.status === 'retired').length,
+    cloudItems: configItems.filter((ci: any) => ci.environment === 'cloud').length,
+    onPremItems: configItems.filter((ci: any) => ci.environment === 'on-premises').length,
+    criticalItems: configItems.filter((ci: any) => ci.criticality === 'critical').length
+  };
+
+  const changeKPIs = {
+    total: changeRequests.length,
+    pending: changeRequests.filter((cr: any) => cr.status === 'pending').length,
+    approved: changeRequests.filter((cr: any) => cr.status === 'approved').length,
+    implemented: changeRequests.filter((cr: any) => cr.status === 'implemented').length,
+    rejected: changeRequests.filter((cr: any) => cr.status === 'rejected').length,
+    emergencyChanges: changeRequests.filter((cr: any) => cr.priority === 'emergency').length,
+    standardChanges: changeRequests.filter((cr: any) => cr.changeType === 'standard').length
+  };
+
+  const KPICard = ({ title, value, icon, trend, subtitle }: any) => (
+    <Card className="p-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{title}</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
+          {subtitle && <p className="text-xs text-gray-500 dark:text-gray-400">{subtitle}</p>}
+        </div>
+        <div className="flex flex-col items-end">
+          {icon}
+          {trend && (
+            <div className={`flex items-center mt-1 ${trend > 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {trend > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+              <span className="text-xs ml-1">{Math.abs(trend)}%</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </Card>
   );
 
   return (
@@ -140,6 +197,47 @@ export default function ServiceManagement({ selectedBrand }: ServiceManagementPr
         </TabsList>
 
         <TabsContent value="services" className="space-y-4">
+          {/* Services KPI Dashboard */}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+            <KPICard
+              title="Total Services"
+              value={serviceKPIs.total}
+              icon={<Server className="h-5 w-5 text-blue-600" />}
+              subtitle="All services"
+            />
+            <KPICard
+              title="Operational"
+              value={serviceKPIs.operational}
+              icon={<CheckCircle className="h-5 w-5 text-green-600" />}
+              trend={2.5}
+              subtitle="Currently running"
+            />
+            <KPICard
+              title="Critical Services"
+              value={serviceKPIs.criticalServices}
+              icon={<AlertTriangle className="h-5 w-5 text-red-600" />}
+              subtitle="High priority"
+            />
+            <KPICard
+              title="High Priority"
+              value={serviceKPIs.highServices}
+              icon={<Activity className="h-5 w-5 text-orange-600" />}
+              subtitle="Important services"
+            />
+            <KPICard
+              title="Planned"
+              value={serviceKPIs.planned}
+              icon={<Clock className="h-5 w-5 text-blue-600" />}
+              subtitle="Upcoming deployment"
+            />
+            <KPICard
+              title="Retired"
+              value={serviceKPIs.retired}
+              icon={<Database className="h-5 w-5 text-gray-600" />}
+              subtitle="Legacy services"
+            />
+          </div>
+
           <div className="grid gap-4">
             {categories.map((category: any) => {
               const categoryServices = services.filter((s: any) => s.categoryId === category.id);
@@ -192,6 +290,53 @@ export default function ServiceManagement({ selectedBrand }: ServiceManagementPr
         </TabsContent>
 
         <TabsContent value="cmdb" className="space-y-4">
+          {/* Configuration Items KPI Dashboard */}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
+            <KPICard
+              title="Total CIs"
+              value={configItemKPIs.total}
+              icon={<Database className="h-5 w-5 text-blue-600" />}
+              subtitle="All configuration items"
+            />
+            <KPICard
+              title="Operational"
+              value={configItemKPIs.operational}
+              icon={<CheckCircle className="h-5 w-5 text-green-600" />}
+              trend={1.8}
+              subtitle="Currently active"
+            />
+            <KPICard
+              title="Cloud Items"
+              value={configItemKPIs.cloudItems}
+              icon={<Cloud className="h-5 w-5 text-blue-600" />}
+              subtitle="Cloud hosted"
+            />
+            <KPICard
+              title="On-Premises"
+              value={configItemKPIs.onPremItems}
+              icon={<Server className="h-5 w-5 text-gray-600" />}
+              subtitle="Local infrastructure"
+            />
+            <KPICard
+              title="Critical Items"
+              value={configItemKPIs.criticalItems}
+              icon={<AlertTriangle className="h-5 w-5 text-red-600" />}
+              subtitle="High priority"
+            />
+            <KPICard
+              title="Maintenance"
+              value={configItemKPIs.maintenance}
+              icon={<Activity className="h-5 w-5 text-orange-600" />}
+              subtitle="Under maintenance"
+            />
+            <KPICard
+              title="Retired"
+              value={configItemKPIs.retired}
+              icon={<Clock className="h-5 w-5 text-gray-600" />}
+              subtitle="End of life"
+            />
+          </div>
+
           <div className="flex items-center space-x-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -277,6 +422,53 @@ export default function ServiceManagement({ selectedBrand }: ServiceManagementPr
         </TabsContent>
 
         <TabsContent value="changes" className="space-y-4">
+          {/* Change Requests KPI Dashboard */}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
+            <KPICard
+              title="Total Changes"
+              value={changeKPIs.total}
+              icon={<RefreshCw className="h-5 w-5 text-blue-600" />}
+              subtitle="All change requests"
+            />
+            <KPICard
+              title="Pending"
+              value={changeKPIs.pending}
+              icon={<Clock className="h-5 w-5 text-orange-600" />}
+              subtitle="Awaiting approval"
+            />
+            <KPICard
+              title="Approved"
+              value={changeKPIs.approved}
+              icon={<CheckCircle className="h-5 w-5 text-green-600" />}
+              trend={3.2}
+              subtitle="Ready for implementation"
+            />
+            <KPICard
+              title="Implemented"
+              value={changeKPIs.implemented}
+              icon={<Activity className="h-5 w-5 text-blue-600" />}
+              subtitle="Successfully completed"
+            />
+            <KPICard
+              title="Emergency"
+              value={changeKPIs.emergencyChanges}
+              icon={<AlertTriangle className="h-5 w-5 text-red-600" />}
+              subtitle="High priority changes"
+            />
+            <KPICard
+              title="Standard"
+              value={changeKPIs.standardChanges}
+              icon={<Server className="h-5 w-5 text-gray-600" />}
+              subtitle="Routine changes"
+            />
+            <KPICard
+              title="Rejected"
+              value={changeKPIs.rejected}
+              icon={<Shield className="h-5 w-5 text-red-600" />}
+              subtitle="Risk mitigated"
+            />
+          </div>
+
           <div className="grid gap-4">
             {changeRequests.map((change: any) => (
               <Card key={change.id}>
