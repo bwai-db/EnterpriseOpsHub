@@ -136,6 +136,60 @@ export const vendorTeamMembers = pgTable("vendor_team_members", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Vendor agreements (NDAs, MSAs, etc.)
+export const vendorAgreements = pgTable("vendor_agreements", {
+  id: serial("id").primaryKey(),
+  vendorId: integer("vendor_id").references(() => vendors.id),
+  agreementType: text("agreement_type").notNull(), // nda, msa, sow, dpa, sla, master_services, consulting, licensing
+  agreementName: text("agreement_name").notNull(),
+  agreementNumber: text("agreement_number"),
+  description: text("description"),
+  
+  // Status and lifecycle
+  status: text("status").notNull().default("draft"), // draft, pending_review, pending_signature, active, expired, terminated, renewed
+  executionDate: timestamp("execution_date"),
+  effectiveDate: timestamp("effective_date"),
+  expirationDate: timestamp("expiration_date"),
+  renewalDate: timestamp("renewal_date"),
+  terminationDate: timestamp("termination_date"),
+  
+  // Financial terms
+  totalValue: decimal("total_value", { precision: 12, scale: 2 }),
+  annualValue: decimal("annual_value", { precision: 12, scale: 2 }),
+  currency: text("currency").default("USD"),
+  
+  // Legal and compliance
+  governingLaw: text("governing_law"),
+  jurisdiction: text("jurisdiction"),
+  confidentialityLevel: text("confidentiality_level").default("standard"), // standard, high, critical
+  dataProtectionRequired: boolean("data_protection_required").default(false),
+  
+  // Approval workflow
+  requestedBy: text("requested_by"),
+  approvedBy: text("approved_by"),
+  legalReviewBy: text("legal_review_by"),
+  approvalDate: timestamp("approval_date"),
+  legalReviewDate: timestamp("legal_review_date"),
+  
+  // Document management
+  documentUrl: text("document_url"),
+  documentVersion: text("document_version").default("1.0"),
+  lastReviewDate: timestamp("last_review_date"),
+  nextReviewDate: timestamp("next_review_date"),
+  
+  // Auto-renewal settings
+  autoRenewal: boolean("auto_renewal").default(false),
+  renewalNoticeDays: integer("renewal_notice_days").default(90),
+  
+  // Risk and compliance flags
+  riskLevel: text("risk_level").default("medium"), // low, medium, high, critical
+  complianceNotes: text("compliance_notes"),
+  
+  brand: text("brand").notNull(), // blorcs, shaypops, all
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const licenses = pgTable("licenses", {
   id: serial("id").primaryKey(),
   vendorId: integer("vendor_id").references(() => vendors.id),
@@ -457,6 +511,12 @@ export const insertVendorTeamMemberSchema = createInsertSchema(vendorTeamMembers
   updatedAt: true,
 });
 
+export const insertVendorAgreementSchema = createInsertSchema(vendorAgreements).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertLicenseSchema = createInsertSchema(licenses).omit({
   id: true,
   createdAt: true,
@@ -576,6 +636,9 @@ export type Vendor = typeof vendors.$inferSelect;
 
 export type InsertVendorTeamMember = z.infer<typeof insertVendorTeamMemberSchema>;
 export type VendorTeamMember = typeof vendorTeamMembers.$inferSelect;
+
+export type InsertVendorAgreement = z.infer<typeof insertVendorAgreementSchema>;
+export type VendorAgreement = typeof vendorAgreements.$inferSelect;
 
 export type InsertLicense = z.infer<typeof insertLicenseSchema>;
 export type License = typeof licenses.$inferSelect;

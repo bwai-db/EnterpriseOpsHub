@@ -1,8 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Building, Edit, Trash2, Plus, Shield, ShieldCheck, ShieldX, MapPin, User, ExternalLink } from "lucide-react";
-import type { Vendor } from "@shared/schema";
+import { Building, Edit, Trash2, Plus, Shield, ShieldCheck, ShieldX, MapPin, User, ExternalLink, FileText, AlertTriangle, CheckCircle } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import type { Vendor, VendorAgreement } from "@shared/schema";
 
 interface VendorTableProps {
   vendors: Vendor[];
@@ -12,6 +13,89 @@ interface VendorTableProps {
 }
 
 export default function VendorTable({ vendors, isLoading, onEdit, onDelete }: VendorTableProps) {
+  // Fetch vendor agreements for all vendors
+  const { data: agreements = [] } = useQuery<VendorAgreement[]>({
+    queryKey: ['/api/vendor-agreements'],
+    enabled: vendors.length > 0,
+  });
+
+  const getVendorAgreementStatus = (vendorId: number) => {
+    const vendorAgreements = agreements.filter(agreement => agreement.vendorId === vendorId);
+    
+    if (vendorAgreements.length === 0) {
+      return { hasNDA: false, hasMSA: false, totalAgreements: 0, pendingCount: 0, activeCount: 0 };
+    }
+
+    const hasNDA = vendorAgreements.some(a => a.agreementType === 'nda' && a.status === 'active');
+    const hasMSA = vendorAgreements.some(a => a.agreementType === 'msa' && a.status === 'active');
+    const pendingCount = vendorAgreements.filter(a => 
+      a.status === 'pending_signature' || a.status === 'pending_review' || a.status === 'draft'
+    ).length;
+    const activeCount = vendorAgreements.filter(a => a.status === 'active').length;
+
+    return { 
+      hasNDA, 
+      hasMSA, 
+      totalAgreements: vendorAgreements.length, 
+      pendingCount, 
+      activeCount,
+      agreements: vendorAgreements
+    };
+  };
+
+  const getAgreementStatusBadges = (vendorId: number) => {
+    const status = getVendorAgreementStatus(vendorId);
+    const badges = [];
+
+    if (status.totalAgreements === 0) {
+      badges.push(
+        <Badge key="no-agreements" variant="outline" className="text-gray-500 border-gray-300 text-xs">
+          <AlertTriangle className="w-3 h-3 mr-1" />
+          No Agreements
+        </Badge>
+      );
+      return badges;
+    }
+
+    if (status.hasNDA) {
+      badges.push(
+        <Badge key="nda" className="bg-green-100 text-green-800 border-green-200 text-xs">
+          <CheckCircle className="w-3 h-3 mr-1" />
+          NDA Active
+        </Badge>
+      );
+    }
+
+    if (status.hasMSA) {
+      badges.push(
+        <Badge key="msa" className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
+          <CheckCircle className="w-3 h-3 mr-1" />
+          MSA Active
+        </Badge>
+      );
+    }
+
+    if (status.pendingCount > 0) {
+      badges.push(
+        <Badge key="pending" variant="outline" className="text-orange-600 border-orange-200 text-xs">
+          <AlertTriangle className="w-3 h-3 mr-1" />
+          {status.pendingCount} Pending
+        </Badge>
+      );
+    }
+
+    if (status.activeCount > 0) {
+      badges.push(
+        <Badge key="total" variant="outline" className="text-gray-600 border-gray-200 text-xs">
+          <FileText className="w-3 h-3 mr-1" />
+          {status.activeCount} Active
+        </Badge>
+      );
+    }
+
+    return badges;
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
@@ -142,10 +226,10 @@ export default function VendorTable({ vendors, isLoading, onEdit, onDelete }: Ve
                     GDAP Compliance
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Account Manager
+                    Agreement Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Headquarters
+                    Account Manager
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -194,6 +278,11 @@ export default function VendorTable({ vendors, isLoading, onEdit, onDelete }: Ve
                       </div>
                     </td>
                     <td className="px-6 py-4">
+                      <div className="space-y-1">
+                        {getAgreementStatusBadges(vendor.id)}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
                       {vendor.accountManager ? (
                         <div className="space-y-1">
                           <div className="text-sm font-medium text-gray-900 flex items-center">
@@ -206,22 +295,15 @@ export default function VendorTable({ vendors, isLoading, onEdit, onDelete }: Ve
                           {vendor.accountManagerPhone && (
                             <div className="text-xs text-gray-500">{vendor.accountManagerPhone}</div>
                           )}
+                          {vendor.hqCity && (
+                            <div className="text-xs text-gray-500 flex items-center mt-1">
+                              <MapPin className="w-3 h-3 mr-1" />
+                              {vendor.hqCity}, {vendor.hqState}
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <span className="text-sm text-gray-400">No contact assigned</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      {vendor.hqCity ? (
-                        <div className="space-y-1">
-                          <div className="text-sm text-gray-900 flex items-center">
-                            <MapPin className="w-3 h-3 mr-1" />
-                            {vendor.hqCity}, {vendor.hqState}
-                          </div>
-                          <div className="text-xs text-gray-500">{vendor.hqCountry}</div>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-gray-400">Location not specified</span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">

@@ -1,5 +1,5 @@
 import { 
-  users, vendors, vendorTeamMembers, licenses, incidents, cloudServices,
+  users, vendors, vendorTeamMembers, vendorAgreements, licenses, incidents, cloudServices,
   corporates, divisions, departments, functions, personas,
   stores, storeInventory, storeSales, storeStaff,
   serviceCategories, itilServices, configurationItems,
@@ -8,6 +8,7 @@ import {
   type User, type InsertUser,
   type Vendor, type InsertVendor,
   type VendorTeamMember, type InsertVendorTeamMember,
+  type VendorAgreement, type InsertVendorAgreement,
   type License, type InsertLicense,
   type Incident, type InsertIncident,
   type CloudService, type InsertCloudService,
@@ -510,6 +511,41 @@ export class DatabaseStorage implements IStorage {
 
   async deleteVendorTeamMember(id: number): Promise<boolean> {
     const result = await db.delete(vendorTeamMembers).where(eq(vendorTeamMembers.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Vendor Agreements
+  async getVendorAgreements(vendorId?: number): Promise<VendorAgreement[]> {
+    if (vendorId) {
+      return await db.select().from(vendorAgreements).where(eq(vendorAgreements.vendorId, vendorId));
+    }
+    return await db.select().from(vendorAgreements);
+  }
+
+  async getVendorAgreement(id: number): Promise<VendorAgreement | undefined> {
+    const [agreement] = await db.select().from(vendorAgreements).where(eq(vendorAgreements.id, id));
+    return agreement || undefined;
+  }
+
+  async createVendorAgreement(insertAgreement: InsertVendorAgreement): Promise<VendorAgreement> {
+    const [agreement] = await db
+      .insert(vendorAgreements)
+      .values(insertAgreement)
+      .returning();
+    return agreement;
+  }
+
+  async updateVendorAgreement(id: number, updateData: Partial<InsertVendorAgreement>): Promise<VendorAgreement> {
+    const [agreement] = await db
+      .update(vendorAgreements)
+      .set(updateData)
+      .where(eq(vendorAgreements.id, id))
+      .returning();
+    return agreement;
+  }
+
+  async deleteVendorAgreement(id: number): Promise<boolean> {
+    const result = await db.delete(vendorAgreements).where(eq(vendorAgreements.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
   }
 

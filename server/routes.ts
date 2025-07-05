@@ -344,6 +344,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Vendor Agreements
+  app.get("/api/vendor-agreements", async (req, res) => {
+    try {
+      const { vendorId } = req.query;
+      const agreements = await storage.getVendorAgreements(
+        vendorId ? parseInt(vendorId as string) : undefined
+      );
+      res.json(agreements);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch vendor agreements" });
+    }
+  });
+
+  app.get("/api/vendor-agreements/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const agreement = await storage.getVendorAgreement(id);
+      if (!agreement) {
+        return res.status(404).json({ message: "Agreement not found" });
+      }
+      res.json(agreement);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch agreement" });
+    }
+  });
+
+  app.post("/api/vendor-agreements", async (req, res) => {
+    try {
+      const agreementData = req.body; // TODO: Add schema validation
+      const agreement = await storage.createVendorAgreement(agreementData);
+      res.status(201).json(agreement);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create agreement" });
+    }
+  });
+
+  app.put("/api/vendor-agreements/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = req.body; // TODO: Add schema validation
+      const agreement = await storage.updateVendorAgreement(id, updateData);
+      res.json(agreement);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update agreement" });
+    }
+  });
+
+  app.delete("/api/vendor-agreements/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteVendorAgreement(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Agreement not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete agreement" });
+    }
+  });
+
   // Licenses
   app.get("/api/licenses", async (req, res) => {
     try {
