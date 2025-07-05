@@ -118,10 +118,9 @@ export default function ITIL({ selectedBrand }: ITILProps) {
           <TabsTrigger value="changes">Change Requests</TabsTrigger>
           <TabsTrigger value="releases">Release Management</TabsTrigger>
         </TabsList>
-      </Tabs>
 
-      {/* ITIL Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        {/* ITIL Metrics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 mt-6">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
@@ -177,44 +176,45 @@ export default function ITIL({ selectedBrand }: ITILProps) {
             </div>
           </CardContent>
         </Card>
-      </div>
+        </div>
 
-      <TabsContent value="incidents">
-        <IncidentTable 
-          incidents={incidents || []}
-          isLoading={isLoading}
-          onEdit={handleEdit}
-          onStatusUpdate={handleStatusUpdate}
-        />
-      </TabsContent>
+        <TabsContent value="incidents">
+          <IncidentTable 
+            incidents={incidents || []}
+            isLoading={isLoading}
+            onEdit={handleEdit}
+            onStatusUpdate={handleStatusUpdate}
+          />
+        </TabsContent>
 
-      <TabsContent value="changes">
-        <Card>
-          <CardHeader>
-            <CardTitle>Change Requests</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-8 text-gray-500">
-              <Clock className="mx-auto w-12 h-12 mb-4 text-gray-300" />
-              <p>Change management functionality coming soon</p>
-            </div>
-          </CardContent>
-        </Card>
-      </TabsContent>
+        <TabsContent value="changes">
+          <Card>
+            <CardHeader>
+              <CardTitle>Change Requests</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8 text-gray-500">
+                <Clock className="mx-auto w-12 h-12 mb-4 text-gray-300" />
+                <p>Change management functionality coming soon</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      <TabsContent value="releases">
-        <Card>
-          <CardHeader>
-            <CardTitle>Release Management</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-8 text-gray-500">
-              <Rocket className="mx-auto w-12 h-12 mb-4 text-gray-300" />
-              <p>Release management functionality coming soon</p>
-            </div>
-          </CardContent>
-        </Card>
-      </TabsContent>
+        <TabsContent value="releases">
+          <Card>
+            <CardHeader>
+              <CardTitle>Release Management</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8 text-gray-500">
+                <Rocket className="mx-auto w-12 h-12 mb-4 text-gray-300" />
+                <p>Release management functionality coming soon</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
