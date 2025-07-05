@@ -720,6 +720,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Distribution Centers Routes
+  app.get("/api/distribution-centers", async (req, res) => {
+    try {
+      const { brand } = req.query;
+      const centers = await storage.getDistributionCenters(brand as string);
+      res.json(centers);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch distribution centers" });
+    }
+  });
+
+  app.get("/api/distribution-centers/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const center = await storage.getDistributionCenter(id);
+      if (!center) {
+        return res.status(404).json({ message: "Distribution center not found" });
+      }
+      res.json(center);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch distribution center" });
+    }
+  });
+
+  app.get("/api/distribution-center-metrics", async (req, res) => {
+    try {
+      const { centerId, quarter, year } = req.query;
+      const metrics = await storage.getDistributionCenterMetrics(
+        centerId ? parseInt(centerId as string) : undefined,
+        quarter as string,
+        year ? parseInt(year as string) : undefined
+      );
+      res.json(metrics);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch distribution center metrics" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

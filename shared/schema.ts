@@ -325,6 +325,45 @@ export const serviceLevelAgreements = pgTable("service_level_agreements", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Supply Chain and Distribution Centers
+export const distributionCenters = pgTable("distribution_centers", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  code: text("code").notNull().unique(), // DYT, LVS, etc.
+  address: text("address").notNull(),
+  city: text("city").notNull(),
+  state: text("state").notNull(),
+  zipCode: text("zip_code").notNull(),
+  country: text("country").notNull().default("US"),
+  primaryBrand: text("primary_brand").notNull(), // blorcs, shaypops
+  status: text("status").notNull().default("active"), // active, inactive, maintenance
+  capacity: integer("capacity"), // Max packages per day
+  currentUtilization: decimal("current_utilization", { precision: 5, scale: 2 }), // Percentage
+  managerName: text("manager_name"),
+  managerEmail: text("manager_email"),
+  phone: text("phone"),
+  operatingHours: text("operating_hours"),
+  timezone: text("timezone"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const distributionCenterMetrics = pgTable("distribution_center_metrics", {
+  id: serial("id").primaryKey(),
+  centerId: integer("center_id").references(() => distributionCenters.id),
+  quarter: text("quarter").notNull(), // Q1-2025, Q2-2025, etc.
+  year: integer("year").notNull(),
+  inboundOrders: integer("inbound_orders").notNull().default(0),
+  outboundOrders: integer("outbound_orders").notNull().default(0),
+  packagesProcessed: integer("packages_processed").notNull().default(0),
+  averageProcessingTime: decimal("average_processing_time", { precision: 8, scale: 2 }), // in hours
+  onTimeDeliveryRate: decimal("on_time_delivery_rate", { precision: 5, scale: 2 }), // percentage
+  damageRate: decimal("damage_rate", { precision: 5, scale: 2 }), // percentage
+  operatingCosts: decimal("operating_costs", { precision: 12, scale: 2 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertCorporateSchema = createInsertSchema(corporates).omit({
   id: true,
@@ -446,6 +485,18 @@ export const insertServiceLevelAgreementSchema = createInsertSchema(serviceLevel
   updatedAt: true,
 });
 
+export const insertDistributionCenterSchema = createInsertSchema(distributionCenters).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDistributionCenterMetricsSchema = createInsertSchema(distributionCenterMetrics).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type InsertCorporate = z.infer<typeof insertCorporateSchema>;
 export type Corporate = typeof corporates.$inferSelect;
@@ -509,3 +560,9 @@ export type ChangeRequest = typeof changeRequests.$inferSelect;
 
 export type InsertServiceLevelAgreement = z.infer<typeof insertServiceLevelAgreementSchema>;
 export type ServiceLevelAgreement = typeof serviceLevelAgreements.$inferSelect;
+
+export type InsertDistributionCenter = z.infer<typeof insertDistributionCenterSchema>;
+export type DistributionCenter = typeof distributionCenters.$inferSelect;
+
+export type InsertDistributionCenterMetrics = z.infer<typeof insertDistributionCenterMetricsSchema>;
+export type DistributionCenterMetrics = typeof distributionCenterMetrics.$inferSelect;

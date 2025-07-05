@@ -4,6 +4,7 @@ import {
   stores, storeInventory, storeSales, storeStaff,
   serviceCategories, itilServices, configurationItems,
   serviceRelationships, ciRelationships, changeRequests, serviceLevelAgreements,
+  distributionCenters, distributionCenterMetrics,
   type User, type InsertUser,
   type Vendor, type InsertVendor,
   type License, type InsertLicense,
@@ -24,7 +25,9 @@ import {
   type ServiceRelationship, type InsertServiceRelationship,
   type CiRelationship, type InsertCiRelationship,
   type ChangeRequest, type InsertChangeRequest,
-  type ServiceLevelAgreement, type InsertServiceLevelAgreement
+  type ServiceLevelAgreement, type InsertServiceLevelAgreement,
+  type DistributionCenter, type InsertDistributionCenter,
+  type DistributionCenterMetrics, type InsertDistributionCenterMetrics
 } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -160,6 +163,19 @@ export interface IStorage {
   createServiceLevelAgreement(sla: InsertServiceLevelAgreement): Promise<ServiceLevelAgreement>;
   updateServiceLevelAgreement(id: number, sla: Partial<InsertServiceLevelAgreement>): Promise<ServiceLevelAgreement>;
   deleteServiceLevelAgreement(id: number): Promise<boolean>;
+
+  // Distribution Centers
+  getDistributionCenters(brand?: string): Promise<DistributionCenter[]>;
+  getDistributionCenter(id: number): Promise<DistributionCenter | undefined>;
+  createDistributionCenter(center: InsertDistributionCenter): Promise<DistributionCenter>;
+  updateDistributionCenter(id: number, center: Partial<InsertDistributionCenter>): Promise<DistributionCenter>;
+  deleteDistributionCenter(id: number): Promise<boolean>;
+
+  getDistributionCenterMetrics(centerId?: number, quarter?: string, year?: number): Promise<DistributionCenterMetrics[]>;
+  getDistributionCenterMetric(id: number): Promise<DistributionCenterMetrics | undefined>;
+  createDistributionCenterMetrics(metrics: InsertDistributionCenterMetrics): Promise<DistributionCenterMetrics>;
+  updateDistributionCenterMetrics(id: number, metrics: Partial<InsertDistributionCenterMetrics>): Promise<DistributionCenterMetrics>;
+  deleteDistributionCenterMetrics(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -932,6 +948,76 @@ export class DatabaseStorage implements IStorage {
 
   async deleteServiceLevelAgreement(id: number): Promise<boolean> {
     const result = await db.delete(serviceLevelAgreements).where(eq(serviceLevelAgreements.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Distribution Centers
+  async getDistributionCenters(brand?: string): Promise<DistributionCenter[]> {
+    let query = db.select().from(distributionCenters);
+    if (brand && brand !== 'all') {
+      query = query.where(eq(distributionCenters.primaryBrand, brand)) as any;
+    }
+    return await query;
+  }
+
+  async getDistributionCenter(id: number): Promise<DistributionCenter | undefined> {
+    const result = await db.select().from(distributionCenters).where(eq(distributionCenters.id, id));
+    return result[0];
+  }
+
+  async createDistributionCenter(insertCenter: InsertDistributionCenter): Promise<DistributionCenter> {
+    const result = await db.insert(distributionCenters).values(insertCenter).returning();
+    return result[0];
+  }
+
+  async updateDistributionCenter(id: number, updateData: Partial<InsertDistributionCenter>): Promise<DistributionCenter> {
+    const result = await db.update(distributionCenters)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(distributionCenters.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteDistributionCenter(id: number): Promise<boolean> {
+    const result = await db.delete(distributionCenters).where(eq(distributionCenters.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async getDistributionCenterMetrics(centerId?: number, quarter?: string, year?: number): Promise<DistributionCenterMetrics[]> {
+    let query = db.select().from(distributionCenterMetrics);
+    
+    const conditions = [];
+    if (centerId) conditions.push(eq(distributionCenterMetrics.centerId, centerId));
+    if (quarter) conditions.push(eq(distributionCenterMetrics.quarter, quarter));
+    if (year) conditions.push(eq(distributionCenterMetrics.year, year));
+    
+    if (conditions.length > 0) {
+      query = query.where(conditions.reduce((acc, condition) => acc && condition)) as any;
+    }
+    
+    return await query;
+  }
+
+  async getDistributionCenterMetric(id: number): Promise<DistributionCenterMetrics | undefined> {
+    const result = await db.select().from(distributionCenterMetrics).where(eq(distributionCenterMetrics.id, id));
+    return result[0];
+  }
+
+  async createDistributionCenterMetrics(insertMetrics: InsertDistributionCenterMetrics): Promise<DistributionCenterMetrics> {
+    const result = await db.insert(distributionCenterMetrics).values(insertMetrics).returning();
+    return result[0];
+  }
+
+  async updateDistributionCenterMetrics(id: number, updateData: Partial<InsertDistributionCenterMetrics>): Promise<DistributionCenterMetrics> {
+    const result = await db.update(distributionCenterMetrics)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(distributionCenterMetrics.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteDistributionCenterMetrics(id: number): Promise<boolean> {
+    const result = await db.delete(distributionCenterMetrics).where(eq(distributionCenterMetrics.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
   }
 }
