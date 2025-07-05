@@ -6,7 +6,8 @@ import {
   insertCorporateSchema, insertDivisionSchema, insertDepartmentSchema, insertFunctionSchema, insertPersonaSchema, insertUserSchema,
   insertStoreSchema, insertStoreInventorySchema, insertStoreSalesSchema, insertStoreStaffSchema,
   insertServiceCategorySchema, insertItilServiceSchema, insertConfigurationItemSchema,
-  insertChangeRequestSchema, insertServiceLevelAgreementSchema
+  insertChangeRequestSchema, insertServiceLevelAgreementSchema,
+  insertIntegrationLibrarySchema, insertIntegrationEndpointSchema, insertIntegrationCredentialSchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -875,6 +876,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(metrics);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch distribution center metrics" });
+    }
+  });
+
+  // Integration Libraries
+  app.get("/api/integration-libraries", async (req, res) => {
+    try {
+      const { brand } = req.query;
+      const libraries = await storage.getIntegrationLibraries(brand as string);
+      res.json(libraries);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch integration libraries" });
+    }
+  });
+
+  app.get("/api/integration-libraries/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const library = await storage.getIntegrationLibrary(id);
+      if (!library) {
+        return res.status(404).json({ message: "Integration library not found" });
+      }
+      res.json(library);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch integration library" });
+    }
+  });
+
+  app.post("/api/integration-libraries", async (req, res) => {
+    try {
+      const libraryData = insertIntegrationLibrarySchema.parse(req.body);
+      const library = await storage.createIntegrationLibrary(libraryData);
+      res.status(201).json(library);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid library data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create integration library" });
+    }
+  });
+
+  app.put("/api/integration-libraries/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = req.body; // TODO: Add schema validation
+      const library = await storage.updateIntegrationLibrary(id, updateData);
+      res.json(library);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update integration library" });
+    }
+  });
+
+  app.delete("/api/integration-libraries/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteIntegrationLibrary(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Integration library not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete integration library" });
+    }
+  });
+
+  // Integration Endpoints
+  app.get("/api/integration-endpoints", async (req, res) => {
+    try {
+      const { libraryId } = req.query;
+      const endpoints = await storage.getIntegrationEndpoints(
+        libraryId ? parseInt(libraryId as string) : undefined
+      );
+      res.json(endpoints);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch integration endpoints" });
+    }
+  });
+
+  app.post("/api/integration-endpoints", async (req, res) => {
+    try {
+      const endpointData = insertIntegrationEndpointSchema.parse(req.body);
+      const endpoint = await storage.createIntegrationEndpoint(endpointData);
+      res.status(201).json(endpoint);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid endpoint data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create integration endpoint" });
+    }
+  });
+
+  // Integration Credentials
+  app.get("/api/integration-credentials", async (req, res) => {
+    try {
+      const { libraryId } = req.query;
+      const credentials = await storage.getIntegrationCredentials(
+        libraryId ? parseInt(libraryId as string) : undefined
+      );
+      res.json(credentials);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch integration credentials" });
+    }
+  });
+
+  app.post("/api/integration-credentials", async (req, res) => {
+    try {
+      const credentialData = insertIntegrationCredentialSchema.parse(req.body);
+      const credential = await storage.createIntegrationCredential(credentialData);
+      res.status(201).json(credential);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid credential data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create integration credential" });
     }
   });
 

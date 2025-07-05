@@ -190,6 +190,67 @@ export const vendorAgreements = pgTable("vendor_agreements", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Integration Center Tables
+export const integrationLibraries = pgTable("integration_libraries", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  provider: text("provider").notNull(), // microsoft, google, aws, salesforce, etc
+  category: text("category").notNull(), // api, sdk, webhook, middleware
+  description: text("description"),
+  version: text("version").notNull(),
+  status: text("status").notNull().default("development"), // development, testing, production, deprecated
+  authMethod: text("auth_method").notNull(), // oauth2, api_key, certificate, service_principal
+  baseUrl: text("base_url"),
+  documentation: text("documentation"),
+  maintainer: text("maintainer"),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  dependencies: text("dependencies").array(),
+  environmentVariables: text("environment_variables").array(),
+  supportedOperations: text("supported_operations").array(),
+  rateLimits: text("rate_limits"),
+  testingEndpoint: text("testing_endpoint"),
+  productionEndpoint: text("production_endpoint"),
+  brand: text("brand").notNull(), // blorcs, shaypops, all
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const integrationEndpoints = pgTable("integration_endpoints", {
+  id: serial("id").primaryKey(),
+  libraryId: integer("library_id").references(() => integrationLibraries.id).notNull(),
+  name: text("name").notNull(),
+  method: text("method").notNull(), // GET, POST, PUT, DELETE, PATCH
+  endpoint: text("endpoint").notNull(),
+  description: text("description"),
+  parameters: text("parameters").array(),
+  requestBody: text("request_body"),
+  responseSchema: text("response_schema"),
+  errorCodes: text("error_codes").array(),
+  examples: text("examples"),
+  requiresAuth: boolean("requires_auth").default(true),
+  permissions: text("permissions").array(),
+  rateLimitTier: text("rate_limit_tier"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const integrationCredentials = pgTable("integration_credentials", {
+  id: serial("id").primaryKey(),
+  libraryId: integer("library_id").references(() => integrationLibraries.id).notNull(),
+  environment: text("environment").notNull(), // development, staging, production
+  credentialType: text("credential_type").notNull(), // oauth2, api_key, certificate, service_principal
+  clientId: text("client_id"),
+  tenantId: text("tenant_id"),
+  scopes: text("scopes").array(),
+  keyVaultReference: text("key_vault_reference"), // Reference to secure key storage
+  isActive: boolean("is_active").default(true),
+  expiresAt: timestamp("expires_at"),
+  lastUsed: timestamp("last_used"),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const licenses = pgTable("licenses", {
   id: serial("id").primaryKey(),
   vendorId: integer("vendor_id").references(() => vendors.id),
@@ -612,6 +673,26 @@ export const insertDistributionCenterMetricsSchema = createInsertSchema(distribu
   updatedAt: true,
 });
 
+export const insertIntegrationLibrarySchema = createInsertSchema(integrationLibraries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastUpdated: true,
+});
+
+export const insertIntegrationEndpointSchema = createInsertSchema(integrationEndpoints).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertIntegrationCredentialSchema = createInsertSchema(integrationCredentials).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastUsed: true,
+});
+
 // Types
 export type InsertCorporate = z.infer<typeof insertCorporateSchema>;
 export type Corporate = typeof corporates.$inferSelect;
@@ -687,3 +768,12 @@ export type DistributionCenter = typeof distributionCenters.$inferSelect;
 
 export type InsertDistributionCenterMetrics = z.infer<typeof insertDistributionCenterMetricsSchema>;
 export type DistributionCenterMetrics = typeof distributionCenterMetrics.$inferSelect;
+
+export type InsertIntegrationLibrary = z.infer<typeof insertIntegrationLibrarySchema>;
+export type IntegrationLibrary = typeof integrationLibraries.$inferSelect;
+
+export type InsertIntegrationEndpoint = z.infer<typeof insertIntegrationEndpointSchema>;
+export type IntegrationEndpoint = typeof integrationEndpoints.$inferSelect;
+
+export type InsertIntegrationCredential = z.infer<typeof insertIntegrationCredentialSchema>;
+export type IntegrationCredential = typeof integrationCredentials.$inferSelect;

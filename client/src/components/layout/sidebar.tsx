@@ -11,7 +11,8 @@ import {
   Users,
   UserCheck,
   ShoppingBag,
-  Database
+  Database,
+  Code
 } from "lucide-react";
 
 const navigationGroups = [
@@ -29,6 +30,7 @@ const navigationGroups = [
       { name: "Cloud Services", href: "/cloud-services", icon: Cloud },
       { name: "ITIL Management", href: "/itil", icon: Ticket },
       { name: "Service Management", href: "/service-management", icon: Database },
+      { name: "Integration Center", href: "/integration-center", icon: Code },
       { name: "Security & Compliance", href: "/security", icon: Shield },
     ]
   },

@@ -5,6 +5,7 @@ import {
   serviceCategories, itilServices, configurationItems,
   serviceRelationships, ciRelationships, changeRequests, serviceLevelAgreements,
   distributionCenters, distributionCenterMetrics,
+  integrationLibraries, integrationEndpoints, integrationCredentials,
   type User, type InsertUser,
   type Vendor, type InsertVendor,
   type VendorTeamMember, type InsertVendorTeamMember,
@@ -29,7 +30,10 @@ import {
   type ChangeRequest, type InsertChangeRequest,
   type ServiceLevelAgreement, type InsertServiceLevelAgreement,
   type DistributionCenter, type InsertDistributionCenter,
-  type DistributionCenterMetrics, type InsertDistributionCenterMetrics
+  type DistributionCenterMetrics, type InsertDistributionCenterMetrics,
+  type IntegrationLibrary, type InsertIntegrationLibrary,
+  type IntegrationEndpoint, type InsertIntegrationEndpoint,
+  type IntegrationCredential, type InsertIntegrationCredential
 } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -1097,6 +1101,111 @@ export class DatabaseStorage implements IStorage {
 
   async deleteDistributionCenterMetrics(id: number): Promise<boolean> {
     const result = await db.delete(distributionCenterMetrics).where(eq(distributionCenterMetrics.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Integration Libraries
+  async getIntegrationLibraries(brand?: string): Promise<IntegrationLibrary[]> {
+    if (brand && brand !== "all") {
+      return await db.select().from(integrationLibraries).where(eq(integrationLibraries.brand, brand));
+    }
+    return await db.select().from(integrationLibraries);
+  }
+
+  async getIntegrationLibrary(id: number): Promise<IntegrationLibrary | undefined> {
+    const [library] = await db.select().from(integrationLibraries).where(eq(integrationLibraries.id, id));
+    return library || undefined;
+  }
+
+  async createIntegrationLibrary(insertLibrary: InsertIntegrationLibrary): Promise<IntegrationLibrary> {
+    const [library] = await db
+      .insert(integrationLibraries)
+      .values(insertLibrary)
+      .returning();
+    return library;
+  }
+
+  async updateIntegrationLibrary(id: number, updateData: Partial<InsertIntegrationLibrary>): Promise<IntegrationLibrary> {
+    const [library] = await db
+      .update(integrationLibraries)
+      .set(updateData)
+      .where(eq(integrationLibraries.id, id))
+      .returning();
+    return library;
+  }
+
+  async deleteIntegrationLibrary(id: number): Promise<boolean> {
+    const result = await db.delete(integrationLibraries).where(eq(integrationLibraries.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Integration Endpoints
+  async getIntegrationEndpoints(libraryId?: number): Promise<IntegrationEndpoint[]> {
+    if (libraryId) {
+      return await db.select().from(integrationEndpoints).where(eq(integrationEndpoints.libraryId, libraryId));
+    }
+    return await db.select().from(integrationEndpoints);
+  }
+
+  async getIntegrationEndpoint(id: number): Promise<IntegrationEndpoint | undefined> {
+    const [endpoint] = await db.select().from(integrationEndpoints).where(eq(integrationEndpoints.id, id));
+    return endpoint || undefined;
+  }
+
+  async createIntegrationEndpoint(insertEndpoint: InsertIntegrationEndpoint): Promise<IntegrationEndpoint> {
+    const [endpoint] = await db
+      .insert(integrationEndpoints)
+      .values(insertEndpoint)
+      .returning();
+    return endpoint;
+  }
+
+  async updateIntegrationEndpoint(id: number, updateData: Partial<InsertIntegrationEndpoint>): Promise<IntegrationEndpoint> {
+    const [endpoint] = await db
+      .update(integrationEndpoints)
+      .set(updateData)
+      .where(eq(integrationEndpoints.id, id))
+      .returning();
+    return endpoint;
+  }
+
+  async deleteIntegrationEndpoint(id: number): Promise<boolean> {
+    const result = await db.delete(integrationEndpoints).where(eq(integrationEndpoints.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Integration Credentials
+  async getIntegrationCredentials(libraryId?: number): Promise<IntegrationCredential[]> {
+    if (libraryId) {
+      return await db.select().from(integrationCredentials).where(eq(integrationCredentials.libraryId, libraryId));
+    }
+    return await db.select().from(integrationCredentials);
+  }
+
+  async getIntegrationCredential(id: number): Promise<IntegrationCredential | undefined> {
+    const [credential] = await db.select().from(integrationCredentials).where(eq(integrationCredentials.id, id));
+    return credential || undefined;
+  }
+
+  async createIntegrationCredential(insertCredential: InsertIntegrationCredential): Promise<IntegrationCredential> {
+    const [credential] = await db
+      .insert(integrationCredentials)
+      .values(insertCredential)
+      .returning();
+    return credential;
+  }
+
+  async updateIntegrationCredential(id: number, updateData: Partial<InsertIntegrationCredential>): Promise<IntegrationCredential> {
+    const [credential] = await db
+      .update(integrationCredentials)
+      .set(updateData)
+      .where(eq(integrationCredentials.id, id))
+      .returning();
+    return credential;
+  }
+
+  async deleteIntegrationCredential(id: number): Promise<boolean> {
+    const result = await db.delete(integrationCredentials).where(eq(integrationCredentials.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
   }
 }
