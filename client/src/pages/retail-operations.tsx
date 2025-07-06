@@ -191,41 +191,63 @@ const WorldMap = ({ stores, onStoreClick }: { stores: StoreType[], onStoreClick:
   };
 
   return (
-    <div className="relative bg-slate-50 dark:bg-slate-900 rounded-lg overflow-hidden">
+    <div className="relative bg-gradient-to-b from-blue-50 to-blue-100 dark:from-slate-900 dark:to-slate-800 rounded-lg overflow-hidden border">
       {/* World Map SVG */}
       <svg viewBox="0 0 1000 500" className="w-full h-64 md:h-80">
-        {/* Simplified world map outline */}
-        <rect width="1000" height="500" fill="currentColor" className="text-blue-100 dark:text-blue-900" />
+        {/* Ocean background */}
+        <rect width="1000" height="500" fill="#3b82f6" fillOpacity="0.1" />
         
-        {/* Continents (simplified shapes) */}
+        {/* Realistic world map paths */}
         {/* North America */}
-        <path d="M100 80 L280 80 L280 200 L100 200 Z" fill="currentColor" className="text-green-200 dark:text-green-800" />
+        <path d="M158 110 L158 95 L178 85 L195 88 L210 78 L225 85 L240 82 L255 95 L275 98 L285 108 L290 125 L285 140 L275 155 L260 165 L245 170 L230 175 L215 180 L200 185 L185 180 L170 175 L158 165 L148 150 L145 135 L148 120 Z" 
+              fill="#22c55e" fillOpacity="0.6" stroke="#16a34a" strokeWidth="1"/>
+        
+        {/* Greenland */}
+        <path d="M320 45 L340 40 L360 45 L365 65 L360 85 L340 90 L320 85 L315 65 Z" 
+              fill="#22c55e" fillOpacity="0.6" stroke="#16a34a" strokeWidth="1"/>
         
         {/* South America */}
-        <path d="M180 250 L280 250 L280 400 L180 400 Z" fill="currentColor" className="text-green-200 dark:text-green-800" />
+        <path d="M245 230 L255 225 L265 235 L270 250 L275 265 L280 285 L275 305 L270 325 L265 345 L260 365 L255 385 L245 395 L235 390 L225 385 L220 365 L215 345 L220 325 L225 305 L230 285 L235 265 L240 250 L245 235 Z" 
+              fill="#22c55e" fillOpacity="0.6" stroke="#16a34a" strokeWidth="1"/>
         
         {/* Europe */}
-        <path d="M400 80 L520 80 L520 180 L400 180 Z" fill="currentColor" className="text-green-200 dark:text-green-800" />
+        <path d="M445 85 L465 80 L485 85 L505 90 L515 105 L510 120 L505 135 L485 140 L465 135 L445 130 L435 115 L440 100 Z" 
+              fill="#22c55e" fillOpacity="0.6" stroke="#16a34a" strokeWidth="1"/>
         
         {/* Africa */}
-        <path d="M380 200 L520 200 L520 380 L380 380 Z" fill="currentColor" className="text-green-200 dark:text-green-800" />
+        <path d="M430 160 L450 155 L470 160 L485 175 L490 195 L495 215 L490 235 L485 255 L480 275 L475 295 L470 315 L465 335 L450 340 L435 335 L420 330 L415 315 L410 295 L415 275 L420 255 L425 235 L430 215 L435 195 L440 175 Z" 
+              fill="#22c55e" fillOpacity="0.6" stroke="#16a34a" strokeWidth="1"/>
         
         {/* Asia */}
-        <path d="M520 60 L800 60 L800 280 L520 280 Z" fill="currentColor" className="text-green-200 dark:text-green-800" />
+        <path d="M520 70 L580 65 L640 70 L700 75 L750 80 L780 90 L790 110 L795 130 L790 150 L785 170 L780 190 L770 210 L760 225 L745 235 L725 240 L705 235 L685 230 L665 225 L645 220 L625 215 L605 210 L585 205 L565 200 L545 195 L530 185 L520 170 L515 150 L520 130 L525 110 L530 90 Z" 
+              fill="#22c55e" fillOpacity="0.6" stroke="#16a34a" strokeWidth="1"/>
         
         {/* Australia */}
-        <path d="M720 350 L820 350 L820 400 L720 400 Z" fill="currentColor" className="text-green-200 dark:text-green-800" />
+        <path d="M720 320 L760 315 L800 320 L820 335 L825 355 L820 375 L800 380 L760 375 L720 370 L700 355 L705 335 Z" 
+              fill="#22c55e" fillOpacity="0.6" stroke="#16a34a" strokeWidth="1"/>
+        
+        {/* Antarctica */}
+        <path d="M100 450 L900 450 L900 480 L100 480 Z" 
+              fill="#e5e7eb" fillOpacity="0.8" stroke="#9ca3af" strokeWidth="1"/>
 
-        {/* Store pins */}
+        {/* Store pins with enhanced styling */}
         {stores.map((store) => {
           const coords = getStoreCoordinates(store);
           const isOpen = isStoreOpen(store);
-          // Convert lat/lng to SVG coordinates (simplified projection)
+          // Convert lat/lng to SVG coordinates (Equirectangular projection)
           const x = ((coords.lng + 180) / 360) * 1000;
           const y = ((90 - coords.lat) / 180) * 500;
           
           return (
             <g key={store.id}>
+              {/* Store pin shadow */}
+              <circle
+                cx={x + 1}
+                cy={y + 1}
+                r="10"
+                fill="rgba(0,0,0,0.2)"
+                className="pointer-events-none"
+              />
               {/* Store pin */}
               <circle
                 cx={x}
@@ -233,41 +255,86 @@ const WorldMap = ({ stores, onStoreClick }: { stores: StoreType[], onStoreClick:
                 r="8"
                 fill={isOpen === true ? '#10b981' : isOpen === false ? '#ef4444' : '#6b7280'}
                 stroke="white"
-                strokeWidth="2"
-                className="cursor-pointer hover:r-10 transition-all"
+                strokeWidth="3"
+                className="cursor-pointer hover:scale-110 transition-all duration-200 drop-shadow-lg"
                 onClick={() => onStoreClick(store)}
               />
-              {/* Store label */}
+              {/* Inner dot for better visibility */}
+              <circle
+                cx={x}
+                cy={y}
+                r="3"
+                fill="white"
+                className="pointer-events-none"
+              />
+              {/* Store label with background */}
+              <rect
+                x={x - 25}
+                y={y - 25}
+                width="50"
+                height="12"
+                fill="rgba(255,255,255,0.9)"
+                stroke="rgba(0,0,0,0.1)"
+                strokeWidth="0.5"
+                rx="6"
+                className="pointer-events-none"
+              />
               <text
                 x={x}
-                y={y - 12}
+                y={y - 16}
                 textAnchor="middle"
-                className="text-xs font-medium fill-slate-800 dark:fill-slate-200 pointer-events-none"
+                className="text-[8px] font-medium fill-slate-700 pointer-events-none"
               >
                 {store.city}
               </text>
+              {/* Pulsing animation for open stores */}
+              {isOpen === true && (
+                <circle
+                  cx={x}
+                  cy={y}
+                  r="8"
+                  fill="none"
+                  stroke="#10b981"
+                  strokeWidth="2"
+                  className="pointer-events-none animate-ping"
+                />
+              )}
             </g>
           );
         })}
       </svg>
       
-      {/* Map Legend */}
-      <div className="absolute bottom-4 left-4 bg-white dark:bg-slate-800 rounded-lg p-3 shadow-lg">
+      {/* Enhanced Map Legend */}
+      <div className="absolute bottom-4 left-4 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm rounded-lg p-3 shadow-lg border border-gray-200 dark:border-gray-700">
         <div className="flex items-center space-x-4 text-sm">
           <div className="flex items-center space-x-1">
-            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-            <span>Open</span>
+            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+            <span className="text-green-700 dark:text-green-300 font-medium">Open</span>
           </div>
           <div className="flex items-center space-x-1">
             <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-            <span>Closed</span>
+            <span className="text-red-700 dark:text-red-300 font-medium">Closed</span>
           </div>
           <div className="flex items-center space-x-1">
             <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
-            <span>Unknown</span>
+            <span className="text-gray-700 dark:text-gray-300 font-medium">Unknown</span>
           </div>
         </div>
       </div>
+      
+      {/* Geographic grid lines for more realism */}
+      <svg viewBox="0 0 1000 500" className="absolute inset-0 w-full h-full pointer-events-none">
+        {/* Longitude lines */}
+        {[0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000].map(x => (
+          <line key={x} x1={x} y1="0" x2={x} y2="500" stroke="rgba(156, 163, 175, 0.3)" strokeWidth="0.5"/>
+        ))}
+        {/* Latitude lines */}
+        {[0, 100, 150, 200, 250, 300, 350, 400, 500].map(y => (
+          <line key={y} x1="0" y1={y} x2="1000" y2={y} stroke="rgba(156, 163, 175, 0.3)" strokeWidth="0.5"/>
+        ))}
+        {/* Equator line */}
+        <line x1="0" y1="250" x2="1000" y2="250" stroke="rgba(156, 163, 175, 0.5)" strokeWidth="1" strokeDasharray="5,5"/>
+      </svg>
     </div>
   );
 };
