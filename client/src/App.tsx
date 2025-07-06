@@ -8,7 +8,7 @@ import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import Vendors from "@/pages/vendors";
 import Licensing from "@/pages/licensing";
-import LicensingManagement from "@/pages/licensing-management";
+import LicensingManagement from "@/pages/licensing-management-new";
 import CloudServices from "@/pages/cloud-services";
 import ITIL from "@/pages/itil";
 import SupplyChain from "@/pages/supply-chain";

@@ -14,11 +14,42 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Plus, Edit, Trash2, User, Package, Award, BarChart3, RefreshCw, Key, Users, Calendar, DollarSign, TrendingUp, Shield, AlertTriangle } from "lucide-react";
+import { 
+  Plus, Edit, Trash2, User, Package, Award, BarChart3, RefreshCw, Key, Users, Calendar, 
+  DollarSign, TrendingUp, Shield, AlertTriangle, Brain, Zap, Target, PieChart, 
+  TrendingDown, Activity, Clock, CheckCircle, XCircle, Lightbulb, Sparkles
+} from "lucide-react";
 
 type BrandFilter = "all" | "blorcs" | "shaypops";
+
+interface LicenseKPIs {
+  totalLicenses: number;
+  utilizationRate: number;
+  monthlyCost: number;
+  costPerLicense: number;
+  expiringIn30Days: number;
+  activeUsers: number;
+  wastageAmount: number;
+  complianceScore: number;
+  vendorCount: number;
+  renewalsThisQuarter: number;
+}
+
+interface AIInsight {
+  id: string;
+  type: 'cost_optimization' | 'utilization' | 'compliance' | 'renewal' | 'security';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  title: string;
+  description: string;
+  recommendation: string;
+  potentialSavings?: number;
+  impactedLicenses?: number;
+  priority: number;
+  category: string;
+}
 
 interface CorporateLicensePack {
   id: number;
@@ -167,11 +198,88 @@ const createAssignmentSchema = z.object({
   brand: z.string().min(1, "Brand is required"),
 });
 
+// Mock AI Insights Data
+const generateAIInsights = (kpis: LicenseKPIs): AIInsight[] => [
+  {
+    id: "cost-opt-1",
+    type: "cost_optimization",
+    severity: "high",
+    title: "Unused Microsoft 365 E5 Licenses",
+    description: `${Math.floor(kpis.totalLicenses * 0.15)} Microsoft 365 E5 licenses are unassigned, costing $${Math.floor(kpis.totalLicenses * 0.15 * 57)} monthly.`,
+    recommendation: "Consider downgrading to E3 licenses or reallocating to active users.",
+    potentialSavings: Math.floor(kpis.totalLicenses * 0.15 * 57 * 12),
+    impactedLicenses: Math.floor(kpis.totalLicenses * 0.15),
+    priority: 1,
+    category: "Cost Optimization"
+  },
+  {
+    id: "util-1",
+    type: "utilization",
+    severity: "medium",
+    title: "Low Power BI Premium Usage",
+    description: "Power BI Premium licenses showing 45% utilization rate.",
+    recommendation: "Provide additional training or consider reducing license count.",
+    impactedLicenses: 25,
+    priority: 2,
+    category: "Utilization"
+  },
+  {
+    id: "renewal-1",
+    type: "renewal",
+    severity: "critical",
+    title: "Adobe Creative Cloud Renewal",
+    description: "150 Adobe licenses expire in 23 days.",
+    recommendation: "Initiate renewal process immediately to avoid service disruption.",
+    impactedLicenses: 150,
+    priority: 1,
+    category: "Renewal Management"
+  },
+  {
+    id: "compliance-1",
+    type: "compliance",
+    severity: "high",
+    title: "Security License Gap",
+    description: "12 users lack Microsoft Defender for Office 365 licenses.",
+    recommendation: "Assign security licenses to maintain compliance standards.",
+    impactedLicenses: 12,
+    priority: 1,
+    category: "Compliance"
+  },
+  {
+    id: "security-1",
+    type: "security",
+    severity: "medium",
+    title: "Azure AD P2 Underutilization",
+    description: "Advanced identity protection features are underutilized.",
+    recommendation: "Implement conditional access policies and risk-based authentication.",
+    impactedLicenses: 75,
+    priority: 3,
+    category: "Security Enhancement"
+  }
+];
+
 export default function LicensingManagement() {
   const [selectedBrand, setSelectedBrand] = useState<BrandFilter>("all");
   const [activeTab, setActiveTab] = useState("overview");
+  const [insightFilter, setInsightFilter] = useState<string>("all");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Mock KPI Data
+  const mockKpis: LicenseKPIs = {
+    totalLicenses: 2847,
+    utilizationRate: 78.4,
+    monthlyCost: 245680,
+    costPerLicense: 86.32,
+    expiringIn30Days: 127,
+    activeUsers: 2234,
+    wastageAmount: 52840,
+    complianceScore: 94.2,
+    vendorCount: 24,
+    renewalsThisQuarter: 8
+  };
+
+  const aiInsights = generateAIInsights(mockKpis);
 
   // Queries
   const { data: licensePacks, isLoading: packsLoading } = useQuery({
