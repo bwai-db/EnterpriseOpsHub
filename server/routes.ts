@@ -522,6 +522,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dashboard metrics
+  // Holistic Business KPI Dashboard
+  app.get("/api/dashboard/holistic-kpis", async (req, res) => {
+    try {
+      const { brand } = req.query;
+      
+      // Core Operations Data
+      const vendors = await storage.getVendors(brand as string);
+      const licenses = await storage.getLicenses(brand as string);
+      const incidents = await storage.getIncidents(brand as string);
+      const cloudServices = await storage.getCloudServices(brand as string);
+      
+      // Organizational Data
+      const users = await storage.getUsers(brand as string);
+      const stores = await storage.getStores(brand as string);
+      const corporates = await storage.getCorporates(brand as string);
+      const divisions = await storage.getDivisions(brand as string);
+      
+      // Manufacturing & Supply Chain Data
+      const manufacturers = await storage.getManufacturers(brand as string);
+      const products = await storage.getProducts(brand as string);
+      const productionOrders = await storage.getProductionOrders(brand as string);
+      const suppliers = await storage.getSuppliers(brand as string);
+      
+      // Facilities & Infrastructure
+      const facilities = await storage.getFacilities(brand as string);
+      const facilityProjects = await storage.getFacilityProjects(brand as string);
+      
+      // Licensing & Compliance
+      const corporateLicensePacks = await storage.getCorporateLicensePacks(brand as string);
+      const specializedLicenses = await storage.getSpecializedLicenses(brand as string);
+      const microsoftKpis = await storage.getMicrosoftLicenseKpis(brand as string);
+      
+      // Calculate time-based metrics
+      const now = new Date();
+      const thirtyDaysFromNow = new Date(now.getTime() + (30 * 24 * 60 * 60 * 1000));
+      const ninetyDaysAgo = new Date(now.getTime() - (90 * 24 * 60 * 60 * 1000));
+      
+      // Operational Excellence KPIs
+      const activeVendors = vendors.filter(v => v.status === "active").length;
+      const expiringLicenses = licenses.filter(l => 
+        l.expiryDate && new Date(l.expiryDate) <= thirtyDaysFromNow && l.status === "active"
+      ).length;
+      const openIncidents = incidents.filter(i => 
+        i.status === "open" || i.status === "assigned" || i.status === "in_progress"
+      ).length;
+      const criticalIncidents = incidents.filter(i => 
+        i.priority === "critical" && (i.status === "open" || i.status === "assigned" || i.status === "in_progress")
+      ).length;
+      
+      // Service Health & Reliability
+      const operationalServices = cloudServices.filter(s => s.status === "operational").length;
+      const cloudHealth = cloudServices.length > 0 
+        ? Math.round((operationalServices / cloudServices.length) * 1000) / 10 
+        : 100;
+      
+      // Human Capital & Organization
+      const totalEmployees = users.length;
+      const activeStores = stores.filter(s => s.status === "active").length;
+      const totalLocations = facilities.length + activeStores;
+      
+      // Manufacturing & Supply Chain Performance
+      const activeProductionOrders = productionOrders.filter(po => po.status === "in_progress").length;
+      const completedProductionOrders = productionOrders.filter(po => po.status === "completed").length;
+      const manufacturingEfficiency = productionOrders.length > 0 
+        ? Math.round((completedProductionOrders / productionOrders.length) * 100) 
+        : 0;
+      
+      // Financial & Licensing Performance
+      const totalLicenseCost = corporateLicensePacks.reduce((sum, pack) => sum + parseFloat(pack.totalCost || "0"), 0);
+      const currentMonthKpis = microsoftKpis.filter(kpi => 
+        kpi.month === now.getMonth() + 1 && kpi.year === now.getFullYear()
+      );
+      const averageUtilization = currentMonthKpis.length > 0
+        ? currentMonthKpis.reduce((sum, kpi) => sum + parseFloat(kpi.utilizationRate || "0"), 0) / currentMonthKpis.length
+        : 0;
+      
+      // Facilities & Project Management
+      const activeFacilityProjects = facilityProjects.filter(p => p.status === "in_progress").length;
+      const completedFacilityProjects = facilityProjects.filter(p => p.status === "completed").length;
+      
+      // Risk & Compliance Metrics
+      const complianceScore = currentMonthKpis.length > 0
+        ? currentMonthKpis.reduce((sum, kpi) => sum + parseFloat(kpi.complianceScore || "0"), 0) / currentMonthKpis.length
+        : 95;
+      const securityScore = currentMonthKpis.length > 0
+        ? currentMonthKpis.reduce((sum, kpi) => sum + parseFloat(kpi.securityScore || "0"), 0) / currentMonthKpis.length
+        : 93;
+
+      res.json({
+        // Business Overview
+        totalEmployees,
+        totalLocations,
+        activeStores,
+        activeFacilities: facilities.length,
+        
+        // Operational Excellence
+        activeVendors,
+        openIncidents,
+        criticalIncidents,
+        expiringLicenses,
+        cloudHealth,
+        
+        // Financial Performance
+        totalLicenseCost: Math.round(totalLicenseCost),
+        averageUtilization: Math.round(averageUtilization * 100) / 100,
+        
+        // Manufacturing & Supply Chain
+        totalProducts: products.length,
+        activeProductionOrders,
+        completedProductionOrders,
+        manufacturingEfficiency,
+        totalSuppliers: suppliers.length,
+        totalManufacturers: manufacturers.length,
+        
+        // Infrastructure & Facilities
+        activeFacilityProjects,
+        completedFacilityProjects,
+        facilityProjectEfficiency: facilityProjects.length > 0 
+          ? Math.round((completedFacilityProjects / facilityProjects.length) * 100) 
+          : 0,
+        
+        // Risk & Compliance
+        complianceScore: Math.round(complianceScore * 100) / 100,
+        securityScore: Math.round(securityScore * 100) / 100,
+        
+        // Organizational Structure
+        totalCorporates: corporates.length,
+        totalDivisions: divisions.length,
+        
+        // Performance Trends (calculated)
+        incidentTrend: criticalIncidents > 0 ? "increasing" : "stable",
+        licensingTrend: averageUtilization > 5 ? "healthy" : "underutilized",
+        manufacturingTrend: manufacturingEfficiency > 80 ? "excellent" : manufacturingEfficiency > 60 ? "good" : "needs_improvement",
+        facilityTrend: activeFacilityProjects > 0 ? "active_expansion" : "stable"
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch holistic business KPIs" });
+    }
+  });
+
   app.get("/api/dashboard/metrics", async (req, res) => {
     try {
       const { brand } = req.query;
