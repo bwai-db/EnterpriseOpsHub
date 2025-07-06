@@ -7,6 +7,7 @@ import {
   distributionCenters, distributionCenterMetrics,
   integrationLibraries, integrationEndpoints, integrationCredentials,
   manufacturers, products, productionOrders, manufacturingMetrics, suppliers, supplyChainKpis,
+  shipments, shipmentStages, shipmentEvents, shippingCarriers, shipmentRoutes, shipmentDocuments, shipmentAlerts,
   type User, type InsertUser,
   type Vendor, type InsertVendor,
   type VendorTeamMember, type InsertVendorTeamMember,
@@ -45,7 +46,14 @@ import {
   type ProductionOrder, type InsertProductionOrder,
   type ManufacturingMetrics, type InsertManufacturingMetrics,
   type Supplier, type InsertSupplier,
-  type SupplyChainKpis, type InsertSupplyChainKpis
+  type SupplyChainKpis, type InsertSupplyChainKpis,
+  type Shipment, type InsertShipment,
+  type ShipmentStage, type InsertShipmentStage,
+  type ShipmentEvent, type InsertShipmentEvent,
+  type ShippingCarrier, type InsertShippingCarrier,
+  type ShipmentRoute, type InsertShipmentRoute,
+  type ShipmentDocument, type InsertShipmentDocument,
+  type ShipmentAlert, type InsertShipmentAlert
 } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";

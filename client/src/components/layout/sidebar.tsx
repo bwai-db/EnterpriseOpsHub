@@ -13,7 +13,8 @@ import {
   UserCheck,
   ShoppingBag,
   Database,
-  Code
+  Code,
+  Package
 } from "lucide-react";
 
 const navigationGroups = [
@@ -40,6 +41,7 @@ const navigationGroups = [
     items: [
       { name: "Supply Chain", href: "/supply-chain", icon: Truck },
       { name: "Manufacturing", href: "/manufacturing", icon: Factory },
+      { name: "Shipment Tracking", href: "/shipment-tracking", icon: Package },
       { name: "Retail Operations", href: "/retail-operations", icon: ShoppingBag },
     ]
   },

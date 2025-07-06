@@ -1104,3 +1104,232 @@ export type CorporateMessage = typeof corporateMessages.$inferSelect;
 
 export type InsertMessageAcknowledgment = z.infer<typeof insertMessageAcknowledgmentSchema>;
 export type MessageAcknowledgment = typeof messageAcknowledgments.$inferSelect;
+
+// Shipment Tracking Tables
+export const shipments = pgTable("shipments", {
+  id: serial("id").primaryKey(),
+  shipmentNumber: text("shipment_number").notNull().unique(),
+  trackingNumber: text("tracking_number"),
+  status: text("status").notNull(), // pending, sourcing, manufacturing, in_transit, at_distribution, delivered, cancelled
+  priority: text("priority").notNull().default("standard"), // urgent, high, standard, low
+  currentStage: text("current_stage").notNull(), // sourcing, manufacturing, shipping_to_distro, at_distribution, shipping_to_destination, delivered
+  currentLocation: text("current_location"),
+  
+  // Source information
+  sourceType: text("source_type").notNull(), // supplier, manufacturer, store, distribution_center
+  sourceId: integer("source_id").notNull(), // References suppliers, manufacturers, stores, or distribution_centers
+  sourceName: text("source_name").notNull(),
+  sourceAddress: text("source_address"),
+  
+  // Destination information
+  destinationType: text("destination_type").notNull(), // store, distribution_center, customer
+  destinationId: integer("destination_id").notNull(),
+  destinationName: text("destination_name").notNull(),
+  destinationAddress: text("destination_address").notNull(),
+  
+  // Product information
+  productId: integer("product_id").references(() => products.id),
+  productName: text("product_name").notNull(),
+  quantity: integer("quantity").notNull(),
+  unitValue: decimal("unit_value", { precision: 10, scale: 2 }),
+  totalValue: decimal("total_value", { precision: 12, scale: 2 }),
+  weight: decimal("weight", { precision: 8, scale: 2 }), // in kg
+  dimensions: text("dimensions"), // LxWxH in cm
+  
+  // Dates and timeline
+  orderDate: timestamp("order_date").notNull(),
+  expectedPickupDate: timestamp("expected_pickup_date"),
+  actualPickupDate: timestamp("actual_pickup_date"),
+  expectedDeliveryDate: timestamp("expected_delivery_date").notNull(),
+  actualDeliveryDate: timestamp("actual_delivery_date"),
+  
+  // Shipping details
+  carrierId: integer("carrier_id"), // References shipping companies
+  carrierName: text("carrier_name"),
+  carrierService: text("carrier_service"), // express, standard, economy
+  shippingCost: decimal("shipping_cost", { precision: 10, scale: 2 }),
+  
+  // Manufacturing details (if applicable)
+  productionOrderId: integer("production_order_id").references(() => productionOrders.id),
+  manufacturerId: integer("manufacturer_id").references(() => manufacturers.id),
+  manufacturingStartDate: timestamp("manufacturing_start_date"),
+  manufacturingEndDate: timestamp("manufacturing_end_date"),
+  qualityCheckStatus: text("quality_check_status"), // pending, passed, failed, not_required
+  
+  // Additional metadata
+  notes: text("notes"),
+  specialInstructions: text("special_instructions"),
+  temperatureControlled: boolean("temperature_controlled").default(false),
+  fragile: boolean("fragile").default(false),
+  hazardous: boolean("hazardous").default(false),
+  customsDeclaration: text("customs_declaration"),
+  
+  brand: text("brand").notNull(), // blorcs, shaypops
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const shipmentStages = pgTable("shipment_stages", {
+  id: serial("id").primaryKey(),
+  shipmentId: integer("shipment_id").references(() => shipments.id).notNull(),
+  stage: text("stage").notNull(), // sourcing, manufacturing, shipping_to_distro, at_distribution, shipping_to_destination, delivered
+  status: text("status").notNull(), // pending, in_progress, completed, failed, cancelled
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  expectedDuration: integer("expected_duration"), // in hours
+  actualDuration: integer("actual_duration"), // in hours
+  location: text("location"),
+  notes: text("notes"),
+  performedBy: text("performed_by"), // Who or what entity performed this stage
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const shipmentEvents = pgTable("shipment_events", {
+  id: serial("id").primaryKey(),
+  shipmentId: integer("shipment_id").references(() => shipments.id).notNull(),
+  eventType: text("event_type").notNull(), // pickup, transit, delivery_attempt, delivered, exception, customs_clearance
+  eventStatus: text("event_status").notNull(), // success, failure, pending, in_progress
+  eventDate: timestamp("event_date").notNull(),
+  location: text("location"),
+  description: text("description").notNull(),
+  details: jsonb("details"), // Additional structured data
+  source: text("source"), // system, carrier, manual, sensor
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const shippingCarriers = pgTable("shipping_carriers", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  code: text("code").notNull().unique(),
+  type: text("type").notNull(), // express, freight, postal, specialty
+  services: text("services").array(), // express, standard, economy, overnight
+  trackingUrlTemplate: text("tracking_url_template"), // URL template with {tracking_number} placeholder
+  apiEndpoint: text("api_endpoint"),
+  apiKey: text("api_key"),
+  isActive: boolean("is_active").default(true),
+  contactInfo: jsonb("contact_info"), // phone, email, website
+  serviceAreas: text("service_areas").array(), // Countries or regions served
+  averageDeliveryTime: integer("average_delivery_time"), // in hours
+  reliability: decimal("reliability", { precision: 5, scale: 2 }), // percentage
+  cost: text("cost"), // low, medium, high
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const shipmentRoutes = pgTable("shipment_routes", {
+  id: serial("id").primaryKey(),
+  shipmentId: integer("shipment_id").references(() => shipments.id).notNull(),
+  sequenceNumber: integer("sequence_number").notNull(),
+  fromLocation: text("from_location").notNull(),
+  toLocation: text("to_location").notNull(),
+  fromType: text("from_type").notNull(), // supplier, manufacturer, distribution_center, transit_hub, store
+  toType: text("to_type").notNull(),
+  distance: decimal("distance", { precision: 8, scale: 2 }), // in km
+  estimatedTransitTime: integer("estimated_transit_time"), // in hours
+  actualTransitTime: integer("actual_transit_time"), // in hours
+  carrierId: integer("carrier_id").references(() => shippingCarriers.id),
+  transportMode: text("transport_mode"), // truck, air, sea, rail
+  cost: decimal("cost", { precision: 10, scale: 2 }),
+  status: text("status").notNull(), // planned, in_progress, completed, cancelled
+  departureDate: timestamp("departure_date"),
+  arrivalDate: timestamp("arrival_date"),
+  actualDepartureDate: timestamp("actual_departure_date"),
+  actualArrivalDate: timestamp("actual_arrival_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const shipmentDocuments = pgTable("shipment_documents", {
+  id: serial("id").primaryKey(),
+  shipmentId: integer("shipment_id").references(() => shipments.id).notNull(),
+  documentType: text("document_type").notNull(), // invoice, packing_list, bill_of_lading, customs_declaration, certificate
+  documentName: text("document_name").notNull(),
+  documentUrl: text("document_url"),
+  documentData: jsonb("document_data"), // Structured document content
+  isRequired: boolean("is_required").default(false),
+  isVerified: boolean("is_verified").default(false),
+  verifiedBy: text("verified_by"),
+  verificationDate: timestamp("verification_date"),
+  expiryDate: timestamp("expiry_date"),
+  notes: text("notes"),
+  uploadedBy: text("uploaded_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const shipmentAlerts = pgTable("shipment_alerts", {
+  id: serial("id").primaryKey(),
+  shipmentId: integer("shipment_id").references(() => shipments.id).notNull(),
+  alertType: text("alert_type").notNull(), // delay, exception, temperature, security, customs
+  severity: text("severity").notNull(), // low, medium, high, critical
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  isResolved: boolean("is_resolved").default(false),
+  resolvedBy: text("resolved_by"),
+  resolvedDate: timestamp("resolved_date"),
+  resolution: text("resolution"),
+  actionRequired: boolean("action_required").default(false),
+  assignedTo: text("assigned_to"),
+  dueDate: timestamp("due_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Insert schemas for shipment tracking
+export const insertShipmentSchema = createInsertSchema(shipments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertShipmentStageSchema = createInsertSchema(shipmentStages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertShipmentEventSchema = createInsertSchema(shipmentEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertShippingCarrierSchema = createInsertSchema(shippingCarriers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertShipmentRouteSchema = createInsertSchema(shipmentRoutes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertShipmentDocumentSchema = createInsertSchema(shipmentDocuments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertShipmentAlertSchema = createInsertSchema(shipmentAlerts).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Shipment tracking types
+export type InsertShipment = z.infer<typeof insertShipmentSchema>;
+export type Shipment = typeof shipments.$inferSelect;
+
+export type InsertShipmentStage = z.infer<typeof insertShipmentStageSchema>;
+export type ShipmentStage = typeof shipmentStages.$inferSelect;
+
+export type InsertShipmentEvent = z.infer<typeof insertShipmentEventSchema>;
+export type ShipmentEvent = typeof shipmentEvents.$inferSelect;
+
+export type InsertShippingCarrier = z.infer<typeof insertShippingCarrierSchema>;
+export type ShippingCarrier = typeof shippingCarriers.$inferSelect;
+
+export type InsertShipmentRoute = z.infer<typeof insertShipmentRouteSchema>;
+export type ShipmentRoute = typeof shipmentRoutes.$inferSelect;
+
+export type InsertShipmentDocument = z.infer<typeof insertShipmentDocumentSchema>;
+export type ShipmentDocument = typeof shipmentDocuments.$inferSelect;
+
+export type InsertShipmentAlert = z.infer<typeof insertShipmentAlertSchema>;
+export type ShipmentAlert = typeof shipmentAlerts.$inferSelect;
