@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { 
   Server, 
   Database, 
@@ -27,11 +28,13 @@ import {
   Clock,
   Activity,
   ChevronDown,
-  Trash2
+  Trash2,
+  Plus
 } from "lucide-react";
 import type { Brand } from "@/lib/types";
 import ServiceDependencyMap from "@/components/service-dependency-map";
 import ImpactAnalysis from "@/components/impact-analysis";
+import ServiceForm from "@/components/forms/service-form";
 
 interface ServiceManagementProps {
   selectedBrand: Brand;
@@ -41,6 +44,7 @@ export default function ServiceManagement({ selectedBrand }: ServiceManagementPr
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedClass, setSelectedClass] = useState("all");
   const [selectedService, setSelectedService] = useState<number | null>(null);
+  const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch service categories
@@ -257,6 +261,27 @@ export default function ServiceManagement({ selectedBrand }: ServiceManagementPr
               icon={<Database className="h-5 w-5 text-gray-600" />}
               subtitle="Legacy services"
             />
+          </div>
+
+          {/* Add Service Button */}
+          <div className="flex justify-end mb-4">
+            <Dialog open={isAddServiceOpen} onOpenChange={setIsAddServiceOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-ms-blue hover:bg-blue-600">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Service
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Add New Service</DialogTitle>
+                </DialogHeader>
+                <ServiceForm 
+                  selectedBrand={selectedBrand}
+                  onSuccess={() => setIsAddServiceOpen(false)}
+                />
+              </DialogContent>
+            </Dialog>
           </div>
 
           <div className="grid gap-4">
