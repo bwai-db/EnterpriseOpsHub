@@ -19,6 +19,7 @@ import RetailOperations from "@/pages/retail-operations";
 import ServiceManagement from "@/pages/service-management";
 import IntegrationCenter from "@/pages/integration-center";
 import ShipmentTracking from "@/pages/shipment-tracking";
+import FacilitiesManagement from "@/pages/facilities-management";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import type { Brand } from "@/lib/types";
@@ -41,6 +42,7 @@ function Router({ selectedBrand }: { selectedBrand: Brand }) {
       <Route path="/service-management" component={() => <ServiceManagement selectedBrand={selectedBrand} />} />
       <Route path="/integration-center" component={() => <IntegrationCenter selectedBrand={selectedBrand} />} />
       <Route path="/shipment-tracking" component={() => <ShipmentTracking selectedBrand={selectedBrand} />} />
+      <Route path="/facilities-management" component={() => <FacilitiesManagement selectedBrand={selectedBrand} />} />
       <Route component={NotFound} />
     </Switch>
   );

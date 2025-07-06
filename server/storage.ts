@@ -8,6 +8,7 @@ import {
   integrationLibraries, integrationEndpoints, integrationCredentials,
   manufacturers, products, productionOrders, manufacturingMetrics, suppliers, supplyChainKpis,
   shipments, shipmentStages, shipmentEvents, shippingCarriers, shipmentRoutes, shipmentDocuments, shipmentAlerts,
+  facilities, facilityProjects, facilityImprovements, facilityRequests, facilityIncidents,
   type User, type InsertUser,
   type Vendor, type InsertVendor,
   type VendorTeamMember, type InsertVendorTeamMember,
@@ -53,7 +54,12 @@ import {
   type ShippingCarrier, type InsertShippingCarrier,
   type ShipmentRoute, type InsertShipmentRoute,
   type ShipmentDocument, type InsertShipmentDocument,
-  type ShipmentAlert, type InsertShipmentAlert
+  type ShipmentAlert, type InsertShipmentAlert,
+  type Facility, type InsertFacility,
+  type FacilityProject, type InsertFacilityProject,
+  type FacilityImprovement, type InsertFacilityImprovement,
+  type FacilityRequest, type InsertFacilityRequest,
+  type FacilityIncident, type InsertFacilityIncident
 } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -282,6 +288,41 @@ export interface IStorage {
   createSupplyChainKpis(kpis: InsertSupplyChainKpis): Promise<SupplyChainKpis>;
   updateSupplyChainKpis(id: number, kpis: Partial<InsertSupplyChainKpis>): Promise<SupplyChainKpis>;
   deleteSupplyChainKpis(id: number): Promise<boolean>;
+
+  // Facilities Management
+  getFacilities(brand?: string): Promise<Facility[]>;
+  getFacility(id: number): Promise<Facility | undefined>;
+  createFacility(facility: InsertFacility): Promise<Facility>;
+  updateFacility(id: number, facility: Partial<InsertFacility>): Promise<Facility>;
+  deleteFacility(id: number): Promise<boolean>;
+
+  // Facility Projects
+  getFacilityProjects(brand?: string, facilityId?: number): Promise<FacilityProject[]>;
+  getFacilityProject(id: number): Promise<FacilityProject | undefined>;
+  createFacilityProject(project: InsertFacilityProject): Promise<FacilityProject>;
+  updateFacilityProject(id: number, project: Partial<InsertFacilityProject>): Promise<FacilityProject>;
+  deleteFacilityProject(id: number): Promise<boolean>;
+
+  // Facility Improvements
+  getFacilityImprovements(brand?: string, facilityId?: number): Promise<FacilityImprovement[]>;
+  getFacilityImprovement(id: number): Promise<FacilityImprovement | undefined>;
+  createFacilityImprovement(improvement: InsertFacilityImprovement): Promise<FacilityImprovement>;
+  updateFacilityImprovement(id: number, improvement: Partial<InsertFacilityImprovement>): Promise<FacilityImprovement>;
+  deleteFacilityImprovement(id: number): Promise<boolean>;
+
+  // Facility Requests
+  getFacilityRequests(brand?: string, facilityId?: number): Promise<FacilityRequest[]>;
+  getFacilityRequest(id: number): Promise<FacilityRequest | undefined>;
+  createFacilityRequest(request: InsertFacilityRequest): Promise<FacilityRequest>;
+  updateFacilityRequest(id: number, request: Partial<InsertFacilityRequest>): Promise<FacilityRequest>;
+  deleteFacilityRequest(id: number): Promise<boolean>;
+
+  // Facility Incidents
+  getFacilityIncidents(brand?: string, facilityId?: number): Promise<FacilityIncident[]>;
+  getFacilityIncident(id: number): Promise<FacilityIncident | undefined>;
+  createFacilityIncident(incident: InsertFacilityIncident): Promise<FacilityIncident>;
+  updateFacilityIncident(id: number, incident: Partial<InsertFacilityIncident>): Promise<FacilityIncident>;
+  deleteFacilityIncident(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1717,6 +1758,214 @@ export class DatabaseStorage implements IStorage {
 
   async deleteSupplyChainKpis(id: number): Promise<boolean> {
     const result = await db.delete(supplyChainKpis).where(eq(supplyChainKpis.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Facilities Management
+  async getFacilities(brand?: string): Promise<Facility[]> {
+    try {
+      if (brand && brand !== "all") {
+        return await db.select().from(facilities).where(eq(facilities.brand, brand));
+      }
+      return await db.select().from(facilities);
+    } catch (error) {
+      console.error("Facilities query error:", error);
+      throw error;
+    }
+  }
+
+  async getFacility(id: number): Promise<Facility | undefined> {
+    const [facility] = await db.select().from(facilities).where(eq(facilities.id, id));
+    return facility || undefined;
+  }
+
+  async createFacility(insertFacility: InsertFacility): Promise<Facility> {
+    const [facility] = await db
+      .insert(facilities)
+      .values(insertFacility)
+      .returning();
+    return facility;
+  }
+
+  async updateFacility(id: number, updateData: Partial<InsertFacility>): Promise<Facility> {
+    const [facility] = await db
+      .update(facilities)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(facilities.id, id))
+      .returning();
+    return facility;
+  }
+
+  async deleteFacility(id: number): Promise<boolean> {
+    const result = await db.delete(facilities).where(eq(facilities.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Facility Projects
+  async getFacilityProjects(brand?: string, facilityId?: number): Promise<FacilityProject[]> {
+    let query = db.select().from(facilityProjects);
+    
+    const conditions = [];
+    if (brand && brand !== 'all') conditions.push(eq(facilityProjects.brand, brand));
+    if (facilityId) conditions.push(eq(facilityProjects.facilityId, facilityId));
+    
+    if (conditions.length > 0) {
+      query = query.where(conditions.reduce((acc, condition) => acc && condition)) as any;
+    }
+    
+    return await query;
+  }
+
+  async getFacilityProject(id: number): Promise<FacilityProject | undefined> {
+    const [project] = await db.select().from(facilityProjects).where(eq(facilityProjects.id, id));
+    return project || undefined;
+  }
+
+  async createFacilityProject(insertProject: InsertFacilityProject): Promise<FacilityProject> {
+    const [project] = await db
+      .insert(facilityProjects)
+      .values(insertProject)
+      .returning();
+    return project;
+  }
+
+  async updateFacilityProject(id: number, updateData: Partial<InsertFacilityProject>): Promise<FacilityProject> {
+    const [project] = await db
+      .update(facilityProjects)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(facilityProjects.id, id))
+      .returning();
+    return project;
+  }
+
+  async deleteFacilityProject(id: number): Promise<boolean> {
+    const result = await db.delete(facilityProjects).where(eq(facilityProjects.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Facility Improvements
+  async getFacilityImprovements(brand?: string, facilityId?: number): Promise<FacilityImprovement[]> {
+    let query = db.select().from(facilityImprovements);
+    
+    const conditions = [];
+    if (brand && brand !== 'all') conditions.push(eq(facilityImprovements.brand, brand));
+    if (facilityId) conditions.push(eq(facilityImprovements.facilityId, facilityId));
+    
+    if (conditions.length > 0) {
+      query = query.where(conditions.reduce((acc, condition) => acc && condition)) as any;
+    }
+    
+    return await query;
+  }
+
+  async getFacilityImprovement(id: number): Promise<FacilityImprovement | undefined> {
+    const [improvement] = await db.select().from(facilityImprovements).where(eq(facilityImprovements.id, id));
+    return improvement || undefined;
+  }
+
+  async createFacilityImprovement(insertImprovement: InsertFacilityImprovement): Promise<FacilityImprovement> {
+    const [improvement] = await db
+      .insert(facilityImprovements)
+      .values(insertImprovement)
+      .returning();
+    return improvement;
+  }
+
+  async updateFacilityImprovement(id: number, updateData: Partial<InsertFacilityImprovement>): Promise<FacilityImprovement> {
+    const [improvement] = await db
+      .update(facilityImprovements)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(facilityImprovements.id, id))
+      .returning();
+    return improvement;
+  }
+
+  async deleteFacilityImprovement(id: number): Promise<boolean> {
+    const result = await db.delete(facilityImprovements).where(eq(facilityImprovements.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Facility Requests
+  async getFacilityRequests(brand?: string, facilityId?: number): Promise<FacilityRequest[]> {
+    let query = db.select().from(facilityRequests);
+    
+    const conditions = [];
+    if (brand && brand !== 'all') conditions.push(eq(facilityRequests.brand, brand));
+    if (facilityId) conditions.push(eq(facilityRequests.facilityId, facilityId));
+    
+    if (conditions.length > 0) {
+      query = query.where(conditions.reduce((acc, condition) => acc && condition)) as any;
+    }
+    
+    return await query;
+  }
+
+  async getFacilityRequest(id: number): Promise<FacilityRequest | undefined> {
+    const [request] = await db.select().from(facilityRequests).where(eq(facilityRequests.id, id));
+    return request || undefined;
+  }
+
+  async createFacilityRequest(insertRequest: InsertFacilityRequest): Promise<FacilityRequest> {
+    const [request] = await db
+      .insert(facilityRequests)
+      .values(insertRequest)
+      .returning();
+    return request;
+  }
+
+  async updateFacilityRequest(id: number, updateData: Partial<InsertFacilityRequest>): Promise<FacilityRequest> {
+    const [request] = await db
+      .update(facilityRequests)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(facilityRequests.id, id))
+      .returning();
+    return request;
+  }
+
+  async deleteFacilityRequest(id: number): Promise<boolean> {
+    const result = await db.delete(facilityRequests).where(eq(facilityRequests.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Facility Incidents
+  async getFacilityIncidents(brand?: string, facilityId?: number): Promise<FacilityIncident[]> {
+    let query = db.select().from(facilityIncidents);
+    
+    const conditions = [];
+    if (brand && brand !== 'all') conditions.push(eq(facilityIncidents.brand, brand));
+    if (facilityId) conditions.push(eq(facilityIncidents.facilityId, facilityId));
+    
+    if (conditions.length > 0) {
+      query = query.where(conditions.reduce((acc, condition) => acc && condition)) as any;
+    }
+    
+    return await query;
+  }
+
+  async getFacilityIncident(id: number): Promise<FacilityIncident | undefined> {
+    const [incident] = await db.select().from(facilityIncidents).where(eq(facilityIncidents.id, id));
+    return incident || undefined;
+  }
+
+  async createFacilityIncident(insertIncident: InsertFacilityIncident): Promise<FacilityIncident> {
+    const [incident] = await db
+      .insert(facilityIncidents)
+      .values(insertIncident)
+      .returning();
+    return incident;
+  }
+
+  async updateFacilityIncident(id: number, updateData: Partial<InsertFacilityIncident>): Promise<FacilityIncident> {
+    const [incident] = await db
+      .update(facilityIncidents)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(facilityIncidents.id, id))
+      .returning();
+    return incident;
+  }
+
+  async deleteFacilityIncident(id: number): Promise<boolean> {
+    const result = await db.delete(facilityIncidents).where(eq(facilityIncidents.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
   }
 }

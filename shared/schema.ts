@@ -1333,3 +1333,285 @@ export type ShipmentDocument = typeof shipmentDocuments.$inferSelect;
 
 export type InsertShipmentAlert = z.infer<typeof insertShipmentAlertSchema>;
 export type ShipmentAlert = typeof shipmentAlerts.$inferSelect;
+
+// Facilities Management Tables
+export const facilities = pgTable("facilities", {
+  id: serial("id").primaryKey(),
+  facilityCode: text("facilityCode").notNull().unique(),
+  facilityName: text("facilityName").notNull(),
+  facilityType: text("facilityType").notNull(),
+  status: text("status").notNull().default("active"),
+  
+  // Location information
+  address: text("address").notNull(),
+  city: text("city").notNull(),
+  state: text("state"),
+  country: text("country").notNull(),
+  zipCode: text("zipCode"),
+  coordinates: text("coordinates"),
+  timezone: text("timezone").notNull(),
+  
+  // Building details
+  buildingSize: decimal("buildingSize", { precision: 10, scale: 2 }),
+  floors: integer("floors").default(1),
+  capacity: integer("capacity"),
+  currentOccupancy: integer("currentOccupancy").default(0),
+  parkingSpaces: integer("parkingSpaces").default(0),
+  
+  // Operational details
+  openedDate: timestamp("openedDate"),
+  leaseStartDate: timestamp("leaseStartDate"),
+  leaseEndDate: timestamp("leaseEndDate"),
+  monthlyRent: decimal("monthlyRent", { precision: 12, scale: 2 }),
+  securityLevel: text("securityLevel").notNull().default("standard"),
+  
+  // Contact information
+  facilityManager: text("facilityManager"),
+  facilityManagerEmail: text("facilityManagerEmail"),
+  facilityManagerPhone: text("facilityManagerPhone"),
+  
+  // Organization
+  brand: text("brand").notNull(),
+  createdAt: timestamp("createdAt").defaultNow(),
+  updatedAt: timestamp("updatedAt").defaultNow(),
+});
+
+export const facilityProjects = pgTable("facilityProjects", {
+  id: serial("id").primaryKey(),
+  projectNumber: text("projectNumber").notNull().unique(),
+  projectName: text("projectName").notNull(),
+  projectType: text("projectType").notNull(),
+  facilityId: integer("facilityId").references(() => facilities.id).notNull(),
+  
+  // Project details
+  description: text("description"),
+  priority: text("priority").notNull().default("medium"),
+  status: text("status").notNull().default("planning"),
+  
+  // Timeline
+  plannedStartDate: date("plannedStartDate"),
+  plannedEndDate: date("plannedEndDate"),
+  actualStartDate: date("actualStartDate"),
+  actualEndDate: date("actualEndDate"),
+  
+  // Budget
+  estimatedCost: decimal("estimatedCost", { precision: 12, scale: 2 }),
+  actualCost: decimal("actualCost", { precision: 12, scale: 2 }),
+  progressPercentage: decimal("progressPercentage", { precision: 5, scale: 2 }).default("0"),
+  
+  // Resources
+  projectManager: text("projectManager"),
+  lastUpdateDate: timestamp("lastUpdateDate").defaultNow(),
+  
+  // Metadata
+  notes: text("notes"),
+  brand: text("brand").notNull(),
+  createdAt: timestamp("createdAt").defaultNow(),
+  updatedAt: timestamp("updatedAt").defaultNow(),
+});
+
+export const facilityImprovements = pgTable("facility_improvements", {
+  id: serial("id").primaryKey(),
+  improvementNumber: text("improvement_number").notNull().unique(),
+  title: text("title").notNull(),
+  category: text("category").notNull(), // comfort, efficiency, sustainability, safety, technology, accessibility
+  facilityId: integer("facility_id").references(() => facilities.id).notNull(),
+  
+  // Improvement details
+  description: text("description").notNull(),
+  currentState: text("current_state"),
+  proposedSolution: text("proposed_solution"),
+  expectedBenefits: text("expected_benefits"),
+  
+  // Classification
+  impactLevel: text("impact_level").notNull(), // minimal, moderate, significant, major
+  urgency: text("urgency").notNull().default("medium"), // low, medium, high, urgent
+  complexity: text("complexity").notNull().default("medium"), // simple, medium, complex, very_complex
+  
+  // Status and workflow
+  status: text("status").notNull().default("submitted"), // submitted, under_review, approved, in_progress, completed, rejected, deferred
+  submittedBy: text("submitted_by").notNull(),
+  reviewedBy: text("reviewed_by"),
+  implementedBy: text("implemented_by"),
+  
+  // Timeline
+  submissionDate: timestamp("submission_date").defaultNow(),
+  reviewDate: timestamp("review_date"),
+  approvalDate: timestamp("approval_date"),
+  implementationDate: timestamp("implementation_date"),
+  completionDate: timestamp("completion_date"),
+  
+  // Budget and resources
+  estimatedCost: decimal("estimated_cost", { precision: 12, scale: 2 }),
+  actualCost: decimal("actual_cost", { precision: 12, scale: 2 }),
+  roi: decimal("roi", { precision: 5, scale: 2 }), // return on investment percentage
+  paybackPeriod: integer("payback_period"), // months
+  
+  // Metrics and tracking
+  energySavings: decimal("energy_savings", { precision: 8, scale: 2 }), // kWh per year
+  costSavings: decimal("cost_savings", { precision: 10, scale: 2 }), // annual savings
+  satisfactionRating: decimal("satisfaction_rating", { precision: 3, scale: 1 }), // 1-10 scale
+  
+  brand: text("brand").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const facilityRequests = pgTable("facility_requests", {
+  id: serial("id").primaryKey(),
+  requestNumber: text("request_number").notNull().unique(),
+  requestType: text("request_type").notNull(), // maintenance, repair, space_allocation, equipment, access, cleaning, catering
+  facilityId: integer("facility_id").references(() => facilities.id).notNull(),
+  
+  // Request details
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  location: text("location"), // specific room, floor, area within facility
+  priority: text("priority").notNull().default("medium"), // low, medium, high, urgent, emergency
+  
+  // Requester information
+  requestedBy: text("requested_by").notNull(),
+  requestedByEmail: text("requested_by_email"),
+  requestedByPhone: text("requested_by_phone"),
+  department: text("department"),
+  
+  // Status and workflow
+  status: text("status").notNull().default("open"), // open, assigned, in_progress, waiting_approval, completed, cancelled, on_hold
+  assignedTo: text("assigned_to"),
+  assignedTeam: text("assigned_team"),
+  
+  // Timeline
+  requestDate: timestamp("request_date").defaultNow(),
+  dueDate: timestamp("due_date"),
+  startDate: timestamp("start_date"),
+  completionDate: timestamp("completion_date"),
+  
+  // Cost and approvals
+  estimatedCost: decimal("estimated_cost", { precision: 10, scale: 2 }),
+  actualCost: decimal("actual_cost", { precision: 10, scale: 2 }),
+  approvalRequired: boolean("approval_required").default(false),
+  approvedBy: text("approved_by"),
+  approvalDate: timestamp("approval_date"),
+  
+  // Resolution and feedback
+  resolution: text("resolution"),
+  workaroundProvided: text("workaround_provided"),
+  satisfactionRating: decimal("satisfaction_rating", { precision: 3, scale: 1 }), // 1-10 scale
+  feedback: text("feedback"),
+  
+  // Technical details
+  tags: text("tags").array(),
+  attachments: text("attachments").array(), // file URLs or references
+  relatedRequests: integer("related_requests").array(), // related request IDs
+  
+  brand: text("brand").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const facilityIncidents = pgTable("facility_incidents", {
+  id: serial("id").primaryKey(),
+  incidentNumber: text("incident_number").notNull().unique(),
+  facilityId: integer("facility_id").references(() => facilities.id).notNull(),
+  
+  // Incident details
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  incidentType: text("incident_type").notNull(), // safety, security, equipment_failure, environmental, fire, medical, power_outage
+  severity: text("severity").notNull(), // low, medium, high, critical, catastrophic
+  location: text("location"), // specific area within facility
+  
+  // People involved
+  reportedBy: text("reported_by").notNull(),
+  reportedByContact: text("reported_by_contact"),
+  witnessess: text("witnesses").array(),
+  injuredPersons: text("injured_persons").array(),
+  evacuationRequired: boolean("evacuation_required").default(false),
+  
+  // Timeline
+  occurredAt: timestamp("occurred_at").notNull(),
+  reportedAt: timestamp("reported_at").defaultNow(),
+  responseTime: integer("response_time"), // minutes from report to first response
+  resolutionTime: integer("resolution_time"), // minutes from report to resolution
+  
+  // Response and resolution
+  status: text("status").notNull().default("open"), // open, investigating, in_progress, resolved, closed
+  assignedTo: text("assigned_to"),
+  firstResponder: text("first_responder"),
+  emergencyServicesNotified: boolean("emergency_services_notified").default(false),
+  emergencyServices: text("emergency_services").array(), // fire, police, medical, building_management
+  
+  // Impact assessment
+  businessImpact: text("business_impact"), // none, minimal, moderate, significant, severe
+  facilityClosure: boolean("facility_closure").default(false),
+  areasClosed: text("areas_closed").array(),
+  peopleAffected: integer("people_affected").default(0),
+  estimatedDowntime: integer("estimated_downtime"), // minutes
+  
+  // Resolution details
+  rootCause: text("root_cause"),
+  corrective_actions: text("corrective_actions"),
+  preventive_actions: text("preventive_actions"),
+  lessonLearned: text("lesson_learned"),
+  
+  // Compliance and reporting
+  regulatoryReporting: boolean("regulatory_reporting").default(false),
+  insuranceClaim: boolean("insurance_claim").default(false),
+  investigationRequired: boolean("investigation_required").default(false),
+  
+  // Cost impact
+  repairCosts: decimal("repair_costs", { precision: 12, scale: 2 }),
+  businessLoss: decimal("business_loss", { precision: 12, scale: 2 }),
+  insuranceCoverage: decimal("insurance_coverage", { precision: 12, scale: 2 }),
+  
+  brand: text("brand").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Insert schemas for facilities management
+export const insertFacilitySchema = createInsertSchema(facilities).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertFacilityProjectSchema = createInsertSchema(facilityProjects).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertFacilityImprovementSchema = createInsertSchema(facilityImprovements).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertFacilityRequestSchema = createInsertSchema(facilityRequests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertFacilityIncidentSchema = createInsertSchema(facilityIncidents).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Facilities management types
+export type InsertFacility = z.infer<typeof insertFacilitySchema>;
+export type Facility = typeof facilities.$inferSelect;
+
+export type InsertFacilityProject = z.infer<typeof insertFacilityProjectSchema>;
+export type FacilityProject = typeof facilityProjects.$inferSelect;
+
+export type InsertFacilityImprovement = z.infer<typeof insertFacilityImprovementSchema>;
+export type FacilityImprovement = typeof facilityImprovements.$inferSelect;
+
+export type InsertFacilityRequest = z.infer<typeof insertFacilityRequestSchema>;
+export type FacilityRequest = typeof facilityRequests.$inferSelect;
+
+export type InsertFacilityIncident = z.infer<typeof insertFacilityIncidentSchema>;
+export type FacilityIncident = typeof facilityIncidents.$inferSelect;

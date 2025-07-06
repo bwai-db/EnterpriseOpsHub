@@ -10,7 +10,8 @@ import {
   insertChangeRequestSchema, insertServiceLevelAgreementSchema,
   insertIntegrationLibrarySchema, insertIntegrationEndpointSchema, insertIntegrationCredentialSchema,
   insertManufacturerSchema, insertProductSchema, insertProductionOrderSchema, 
-  insertManufacturingMetricsSchema, insertSupplierSchema, insertSupplyChainKpisSchema
+  insertManufacturingMetricsSchema, insertSupplierSchema, insertSupplyChainKpisSchema,
+  insertFacilitySchema, insertFacilityProjectSchema, insertFacilityImprovementSchema, insertFacilityRequestSchema, insertFacilityIncidentSchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -1417,6 +1418,152 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid KPI data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to create supply chain KPIs" });
+    }
+  });
+
+  // Facilities Management Routes
+  // Facilities
+  app.get("/api/facilities", async (req, res) => {
+    try {
+      const { brand } = req.query;
+      const facilities = await storage.getFacilities(brand as string);
+      res.json(facilities);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch facilities" });
+    }
+  });
+
+  app.get("/api/facilities/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const facility = await storage.getFacility(id);
+      if (!facility) {
+        return res.status(404).json({ message: "Facility not found" });
+      }
+      res.json(facility);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch facility" });
+    }
+  });
+
+  app.post("/api/facilities", async (req, res) => {
+    try {
+      const facilityData = insertFacilitySchema.parse(req.body);
+      const facility = await storage.createFacility(facilityData);
+      res.status(201).json(facility);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid facility data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create facility" });
+    }
+  });
+
+  // Facility Projects
+  app.get("/api/facility-projects", async (req, res) => {
+    try {
+      const { brand, facilityId } = req.query;
+      const projects = await storage.getFacilityProjects(
+        brand as string,
+        facilityId ? parseInt(facilityId as string) : undefined
+      );
+      res.json(projects);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch facility projects" });
+    }
+  });
+
+  app.post("/api/facility-projects", async (req, res) => {
+    try {
+      const projectData = insertFacilityProjectSchema.parse(req.body);
+      const project = await storage.createFacilityProject(projectData);
+      res.status(201).json(project);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid project data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create facility project" });
+    }
+  });
+
+  // Facility Improvements
+  app.get("/api/facility-improvements", async (req, res) => {
+    try {
+      const { brand, facilityId } = req.query;
+      const improvements = await storage.getFacilityImprovements(
+        brand as string,
+        facilityId ? parseInt(facilityId as string) : undefined
+      );
+      res.json(improvements);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch facility improvements" });
+    }
+  });
+
+  app.post("/api/facility-improvements", async (req, res) => {
+    try {
+      const improvementData = insertFacilityImprovementSchema.parse(req.body);
+      const improvement = await storage.createFacilityImprovement(improvementData);
+      res.status(201).json(improvement);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid improvement data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create facility improvement" });
+    }
+  });
+
+  // Facility Requests
+  app.get("/api/facility-requests", async (req, res) => {
+    try {
+      const { brand, facilityId } = req.query;
+      const requests = await storage.getFacilityRequests(
+        brand as string,
+        facilityId ? parseInt(facilityId as string) : undefined
+      );
+      res.json(requests);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch facility requests" });
+    }
+  });
+
+  app.post("/api/facility-requests", async (req, res) => {
+    try {
+      const requestData = insertFacilityRequestSchema.parse(req.body);
+      const request = await storage.createFacilityRequest(requestData);
+      res.status(201).json(request);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create facility request" });
+    }
+  });
+
+  // Facility Incidents
+  app.get("/api/facility-incidents", async (req, res) => {
+    try {
+      const { brand, facilityId } = req.query;
+      const incidents = await storage.getFacilityIncidents(
+        brand as string,
+        facilityId ? parseInt(facilityId as string) : undefined
+      );
+      res.json(incidents);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch facility incidents" });
+    }
+  });
+
+  app.post("/api/facility-incidents", async (req, res) => {
+    try {
+      const incidentData = insertFacilityIncidentSchema.parse(req.body);
+      const incident = await storage.createFacilityIncident(incidentData);
+      res.status(201).json(incident);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid incident data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create facility incident" });
     }
   });
 

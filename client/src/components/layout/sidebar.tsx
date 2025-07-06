@@ -14,7 +14,8 @@ import {
   ShoppingBag,
   Database,
   Code,
-  Package
+  Package,
+  MapPin
 } from "lucide-react";
 
 const navigationGroups = [
@@ -43,6 +44,7 @@ const navigationGroups = [
       { name: "Manufacturing", href: "/manufacturing", icon: Factory },
       { name: "Shipment Tracking", href: "/shipment-tracking", icon: Package },
       { name: "Retail Operations", href: "/retail-operations", icon: ShoppingBag },
+      { name: "Facilities Management", href: "/facilities-management", icon: MapPin },
     ]
   },
   {
