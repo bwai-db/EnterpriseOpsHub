@@ -1005,6 +1005,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/integration-credentials/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = req.body; // TODO: Add schema validation
+      const credential = await storage.updateIntegrationCredential(id, updateData);
+      res.json(credential);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update integration credential" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

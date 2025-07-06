@@ -24,7 +24,9 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
   const [isLibraryDialogOpen, setIsLibraryDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCredentialDialogOpen, setIsCredentialDialogOpen] = useState(false);
+  const [isEditCredentialDialogOpen, setIsEditCredentialDialogOpen] = useState(false);
   const [selectedLibrary, setSelectedLibrary] = useState<IntegrationLibrary | null>(null);
+  const [selectedCredential, setSelectedCredential] = useState<IntegrationCredential | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<IntegrationLibrary>>({});
   const [credentialFormData, setCredentialFormData] = useState<Partial<IntegrationCredential>>({});
   const { toast } = useToast();
@@ -78,6 +80,20 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to create credential", variant: "destructive" });
+    }
+  });
+
+  const updateCredentialMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<IntegrationCredential> }) => 
+      apiRequest('PUT', `/api/integration-credentials/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/integration-credentials'] });
+      setIsEditCredentialDialogOpen(false);
+      setCredentialFormData({});
+      toast({ title: "Success", description: "Credential updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update credential", variant: "destructive" });
     }
   });
 
@@ -167,6 +183,31 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
   const handleSaveCredential = () => {
     if (credentialFormData.libraryId) {
       createCredentialMutation.mutate(credentialFormData);
+    }
+  };
+
+  const handleEditCredential = (credential: IntegrationCredential) => {
+    setSelectedCredential(credential);
+    setCredentialFormData({
+      libraryId: credential.libraryId,
+      environment: credential.environment,
+      credentialType: credential.credentialType,
+      clientId: credential.clientId,
+      tenantId: credential.tenantId,
+      scopes: credential.scopes,
+      keyVaultReference: credential.keyVaultReference,
+      isActive: credential.isActive,
+      createdBy: credential.createdBy
+    });
+    setIsEditCredentialDialogOpen(true);
+  };
+
+  const handleUpdateCredential = () => {
+    if (selectedCredential && credentialFormData) {
+      updateCredentialMutation.mutate({ 
+        id: selectedCredential.id, 
+        data: credentialFormData 
+      });
     }
   };
 
@@ -593,6 +634,131 @@ Write-Host "Script execution completed!" -ForegroundColor Green`;
               </div>
             </DialogContent>
           </Dialog>
+          
+          {/* Edit Credential Dialog */}
+          <Dialog open={isEditCredentialDialogOpen} onOpenChange={setIsEditCredentialDialogOpen}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Edit Authentication Credential</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-cred-environment">Environment</Label>
+                    <Select 
+                      value={credentialFormData.environment || 'production'} 
+                      onValueChange={(value) => setCredentialFormData(prev => ({ ...prev, environment: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select environment" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="production">Production</SelectItem>
+                        <SelectItem value="development">Development</SelectItem>
+                        <SelectItem value="staging">Staging</SelectItem>
+                        <SelectItem value="testing">Testing</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-cred-type">Credential Type</Label>
+                    <Select 
+                      value={credentialFormData.credentialType || 'oauth2'} 
+                      onValueChange={(value) => setCredentialFormData(prev => ({ ...prev, credentialType: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select credential type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="oauth2">OAuth 2.0</SelectItem>
+                        <SelectItem value="api_key">API Key</SelectItem>
+                        <SelectItem value="basic_auth">Basic Auth</SelectItem>
+                        <SelectItem value="bearer_token">Bearer Token</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-cred-client-id">Client ID</Label>
+                    <Input 
+                      id="edit-cred-client-id" 
+                      value={credentialFormData.clientId || ''} 
+                      onChange={(e) => setCredentialFormData(prev => ({ ...prev, clientId: e.target.value }))}
+                      placeholder="Enter client/application ID" 
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-cred-tenant-id">Tenant ID</Label>
+                    <Input 
+                      id="edit-cred-tenant-id" 
+                      value={credentialFormData.tenantId || ''} 
+                      onChange={(e) => setCredentialFormData(prev => ({ ...prev, tenantId: e.target.value }))}
+                      placeholder="Enter tenant ID (for Azure AD)" 
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="edit-cred-keyvault">Key Vault Reference</Label>
+                  <Input 
+                    id="edit-cred-keyvault" 
+                    value={credentialFormData.keyVaultReference || ''} 
+                    onChange={(e) => setCredentialFormData(prev => ({ ...prev, keyVaultReference: e.target.value }))}
+                    placeholder="Key vault secret reference (e.g., keyvault-secret-name)" 
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-cred-scopes">Scopes (comma-separated)</Label>
+                  <Input 
+                    id="edit-cred-scopes" 
+                    value={credentialFormData.scopes?.join(', ') || ''} 
+                    onChange={(e) => setCredentialFormData(prev => ({ 
+                      ...prev, 
+                      scopes: e.target.value.split(',').map(s => s.trim()).filter(s => s.length > 0)
+                    }))}
+                    placeholder="e.g., https://graph.microsoft.com/.default" 
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-cred-created-by">Created By</Label>
+                    <Input 
+                      id="edit-cred-created-by" 
+                      value={credentialFormData.createdBy || ''} 
+                      onChange={(e) => setCredentialFormData(prev => ({ ...prev, createdBy: e.target.value }))}
+                      placeholder="Who created this credential" 
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Label htmlFor="edit-cred-active">Active Status</Label>
+                    <Select 
+                      value={credentialFormData.isActive ? 'true' : 'false'} 
+                      onValueChange={(value) => setCredentialFormData(prev => ({ ...prev, isActive: value === 'true' }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="true">Active</SelectItem>
+                        <SelectItem value="false">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setIsEditCredentialDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleUpdateCredential}
+                    disabled={updateCredentialMutation.isPending}
+                  >
+                    {updateCredentialMutation.isPending ? 'Updating...' : 'Update Credential'}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -830,7 +996,7 @@ Write-Host "Script execution completed!" -ForegroundColor Green`;
                               </TableCell>
                               <TableCell>
                                 <div className="flex gap-1">
-                                  <Button variant="ghost" size="sm">
+                                  <Button variant="ghost" size="sm" onClick={() => handleEditCredential(credential)}>
                                     <Edit className="h-3 w-3" />
                                   </Button>
                                   <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
