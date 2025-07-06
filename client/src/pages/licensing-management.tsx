@@ -298,6 +298,22 @@ export default function LicensingManagement() {
     },
   });
 
+  const seedEnterpriseLicensesMutation = useMutation({
+    mutationFn: () => apiRequest("/api/licenses/seed-enterprise", { method: "POST" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/corporate-license-packs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/entitlement-licenses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/specialized-licenses"] });
+      toast({ 
+        title: "Enterprise licenses seeded successfully", 
+        description: "Microsoft 365, Power Platform, and Adobe licenses have been added" 
+      });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to seed enterprise licenses", variant: "destructive" });
+    },
+  });
+
   const onCreatePack = (data: any) => {
     const packData = {
       ...data,
@@ -335,6 +351,10 @@ export default function LicensingManagement() {
     
     const tenantId = selectedBrand === "blorcs" ? "tenant-blorcs-001" : "tenant-shaypops-001";
     syncMicrosoftMutation.mutate({ tenantId, brand: selectedBrand });
+  };
+
+  const handleSeedEnterpriseLicenses = () => {
+    seedEnterpriseLicensesMutation.mutate();
   };
 
   const getStatusBadgeVariant = (status: string) => {
@@ -409,6 +429,15 @@ export default function LicensingManagement() {
         </div>
         
         <div className="flex items-center gap-4">
+          <Button
+            onClick={handleSeedEnterpriseLicenses}
+            disabled={seedEnterpriseLicensesMutation.isPending}
+            variant="outline"
+          >
+            <Package className="h-4 w-4 mr-2" />
+            {seedEnterpriseLicensesMutation.isPending ? "Seeding..." : "Seed Enterprise Licenses"}
+          </Button>
+          
           <Button
             onClick={handleSyncMicrosoft}
             disabled={syncMicrosoftMutation.isPending}

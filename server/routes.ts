@@ -1940,6 +1940,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Seed Enterprise Licenses
+  app.post("/api/licenses/seed-enterprise", async (req, res) => {
+    try {
+      await storage.seedEnterpriseLicenses();
+      res.json({ message: "Successfully seeded enterprise licenses with Microsoft 365, Power Platform, and Adobe products" });
+    } catch (error) {
+      console.error("Error seeding enterprise licenses:", error);
+      res.status(500).json({ message: "Failed to seed enterprise licenses" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
