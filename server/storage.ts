@@ -9,6 +9,7 @@ import {
   manufacturers, products, productionOrders, manufacturingMetrics, suppliers, supplyChainKpis,
   shipments, shipmentStages, shipmentEvents, shippingCarriers, shipmentRoutes, shipmentDocuments, shipmentAlerts,
   facilities, facilityProjects, facilityImprovements, facilityRequests, facilityIncidents,
+  corporateLicensePacks, entitlementLicenses, specializedLicenses, userLicenseAssignments, microsoftLicenseKpis,
   type User, type InsertUser,
   type Vendor, type InsertVendor,
   type VendorTeamMember, type InsertVendorTeamMember,
@@ -59,7 +60,12 @@ import {
   type FacilityProject, type InsertFacilityProject,
   type FacilityImprovement, type InsertFacilityImprovement,
   type FacilityRequest, type InsertFacilityRequest,
-  type FacilityIncident, type InsertFacilityIncident
+  type FacilityIncident, type InsertFacilityIncident,
+  type CorporateLicensePack, type InsertCorporateLicensePack,
+  type EntitlementLicense, type InsertEntitlementLicense,
+  type SpecializedLicense, type InsertSpecializedLicense,
+  type UserLicenseAssignment, type InsertUserLicenseAssignment,
+  type MicrosoftLicenseKpis, type InsertMicrosoftLicenseKpis
 } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -323,6 +329,40 @@ export interface IStorage {
   createFacilityIncident(incident: InsertFacilityIncident): Promise<FacilityIncident>;
   updateFacilityIncident(id: number, incident: Partial<InsertFacilityIncident>): Promise<FacilityIncident>;
   deleteFacilityIncident(id: number): Promise<boolean>;
+
+  // Licensing Management
+  getCorporateLicensePacks(brand?: string): Promise<CorporateLicensePack[]>;
+  getCorporateLicensePack(id: number): Promise<CorporateLicensePack | undefined>;
+  createCorporateLicensePack(pack: InsertCorporateLicensePack): Promise<CorporateLicensePack>;
+  updateCorporateLicensePack(id: number, pack: Partial<InsertCorporateLicensePack>): Promise<CorporateLicensePack>;
+  deleteCorporateLicensePack(id: number): Promise<boolean>;
+
+  getEntitlementLicenses(brand?: string, packId?: number): Promise<EntitlementLicense[]>;
+  getEntitlementLicense(id: number): Promise<EntitlementLicense | undefined>;
+  createEntitlementLicense(license: InsertEntitlementLicense): Promise<EntitlementLicense>;
+  updateEntitlementLicense(id: number, license: Partial<InsertEntitlementLicense>): Promise<EntitlementLicense>;
+  deleteEntitlementLicense(id: number): Promise<boolean>;
+
+  getSpecializedLicenses(brand?: string, packId?: number): Promise<SpecializedLicense[]>;
+  getSpecializedLicense(id: number): Promise<SpecializedLicense | undefined>;
+  createSpecializedLicense(license: InsertSpecializedLicense): Promise<SpecializedLicense>;
+  updateSpecializedLicense(id: number, license: Partial<InsertSpecializedLicense>): Promise<SpecializedLicense>;
+  deleteSpecializedLicense(id: number): Promise<boolean>;
+
+  getUserLicenseAssignments(brand?: string, userId?: number): Promise<UserLicenseAssignment[]>;
+  getUserLicenseAssignment(id: number): Promise<UserLicenseAssignment | undefined>;
+  createUserLicenseAssignment(assignment: InsertUserLicenseAssignment): Promise<UserLicenseAssignment>;
+  updateUserLicenseAssignment(id: number, assignment: Partial<InsertUserLicenseAssignment>): Promise<UserLicenseAssignment>;
+  deleteUserLicenseAssignment(id: number): Promise<boolean>;
+  assignLicenseToUser(userId: number, licenseType: string, licenseId: number, assignedBy: string, reason?: string): Promise<UserLicenseAssignment>;
+  revokeLicenseFromUser(assignmentId: number, revokedBy: string, reason?: string): Promise<boolean>;
+
+  getMicrosoftLicenseKpis(brand?: string, month?: number, year?: number): Promise<MicrosoftLicenseKpis[]>;
+  getMicrosoftLicenseKpi(id: number): Promise<MicrosoftLicenseKpis | undefined>;
+  createMicrosoftLicenseKpis(kpis: InsertMicrosoftLicenseKpis): Promise<MicrosoftLicenseKpis>;
+  updateMicrosoftLicenseKpis(id: number, kpis: Partial<InsertMicrosoftLicenseKpis>): Promise<MicrosoftLicenseKpis>;
+  deleteMicrosoftLicenseKpis(id: number): Promise<boolean>;
+  syncMicrosoftLicenseData(tenantId: string, brand: string): Promise<MicrosoftLicenseKpis>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1985,6 +2025,271 @@ export class DatabaseStorage implements IStorage {
   async deleteFacilityIncident(id: number): Promise<boolean> {
     const result = await db.delete(facilityIncidents).where(eq(facilityIncidents.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Licensing Management Implementation
+
+  // Corporate License Packs
+  async getCorporateLicensePacks(brand?: string): Promise<CorporateLicensePack[]> {
+    if (brand && brand !== "all") {
+      return await db.select().from(corporateLicensePacks).where(eq(corporateLicensePacks.brand, brand));
+    }
+    return await db.select().from(corporateLicensePacks);
+  }
+
+  async getCorporateLicensePack(id: number): Promise<CorporateLicensePack | undefined> {
+    const [pack] = await db.select().from(corporateLicensePacks).where(eq(corporateLicensePacks.id, id));
+    return pack || undefined;
+  }
+
+  async createCorporateLicensePack(insertPack: InsertCorporateLicensePack): Promise<CorporateLicensePack> {
+    const [pack] = await db
+      .insert(corporateLicensePacks)
+      .values(insertPack)
+      .returning();
+    return pack;
+  }
+
+  async updateCorporateLicensePack(id: number, updateData: Partial<InsertCorporateLicensePack>): Promise<CorporateLicensePack> {
+    const [pack] = await db
+      .update(corporateLicensePacks)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(corporateLicensePacks.id, id))
+      .returning();
+    return pack;
+  }
+
+  async deleteCorporateLicensePack(id: number): Promise<boolean> {
+    const result = await db.delete(corporateLicensePacks).where(eq(corporateLicensePacks.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Entitlement Licenses
+  async getEntitlementLicenses(brand?: string, packId?: number): Promise<EntitlementLicense[]> {
+    let query = db.select().from(entitlementLicenses);
+    
+    if (packId) {
+      query = query.where(eq(entitlementLicenses.packId, packId));
+    } else if (brand && brand !== "all") {
+      query = query.where(eq(entitlementLicenses.brand, brand));
+    }
+    
+    return await query;
+  }
+
+  async getEntitlementLicense(id: number): Promise<EntitlementLicense | undefined> {
+    const [license] = await db.select().from(entitlementLicenses).where(eq(entitlementLicenses.id, id));
+    return license || undefined;
+  }
+
+  async createEntitlementLicense(insertLicense: InsertEntitlementLicense): Promise<EntitlementLicense> {
+    const [license] = await db
+      .insert(entitlementLicenses)
+      .values(insertLicense)
+      .returning();
+    return license;
+  }
+
+  async updateEntitlementLicense(id: number, updateData: Partial<InsertEntitlementLicense>): Promise<EntitlementLicense> {
+    const [license] = await db
+      .update(entitlementLicenses)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(entitlementLicenses.id, id))
+      .returning();
+    return license;
+  }
+
+  async deleteEntitlementLicense(id: number): Promise<boolean> {
+    const result = await db.delete(entitlementLicenses).where(eq(entitlementLicenses.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Specialized Licenses
+  async getSpecializedLicenses(brand?: string, packId?: number): Promise<SpecializedLicense[]> {
+    let query = db.select().from(specializedLicenses);
+    
+    if (packId) {
+      query = query.where(eq(specializedLicenses.packId, packId));
+    } else if (brand && brand !== "all") {
+      query = query.where(eq(specializedLicenses.brand, brand));
+    }
+    
+    return await query;
+  }
+
+  async getSpecializedLicense(id: number): Promise<SpecializedLicense | undefined> {
+    const [license] = await db.select().from(specializedLicenses).where(eq(specializedLicenses.id, id));
+    return license || undefined;
+  }
+
+  async createSpecializedLicense(insertLicense: InsertSpecializedLicense): Promise<SpecializedLicense> {
+    const [license] = await db
+      .insert(specializedLicenses)
+      .values(insertLicense)
+      .returning();
+    return license;
+  }
+
+  async updateSpecializedLicense(id: number, updateData: Partial<InsertSpecializedLicense>): Promise<SpecializedLicense> {
+    const [license] = await db
+      .update(specializedLicenses)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(specializedLicenses.id, id))
+      .returning();
+    return license;
+  }
+
+  async deleteSpecializedLicense(id: number): Promise<boolean> {
+    const result = await db.delete(specializedLicenses).where(eq(specializedLicenses.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // User License Assignments
+  async getUserLicenseAssignments(brand?: string, userId?: number): Promise<UserLicenseAssignment[]> {
+    let query = db.select().from(userLicenseAssignments);
+    
+    if (userId) {
+      query = query.where(eq(userLicenseAssignments.userId, userId));
+    } else if (brand && brand !== "all") {
+      query = query.where(eq(userLicenseAssignments.brand, brand));
+    }
+    
+    return await query;
+  }
+
+  async getUserLicenseAssignment(id: number): Promise<UserLicenseAssignment | undefined> {
+    const [assignment] = await db.select().from(userLicenseAssignments).where(eq(userLicenseAssignments.id, id));
+    return assignment || undefined;
+  }
+
+  async createUserLicenseAssignment(insertAssignment: InsertUserLicenseAssignment): Promise<UserLicenseAssignment> {
+    const [assignment] = await db
+      .insert(userLicenseAssignments)
+      .values(insertAssignment)
+      .returning();
+    return assignment;
+  }
+
+  async updateUserLicenseAssignment(id: number, updateData: Partial<InsertUserLicenseAssignment>): Promise<UserLicenseAssignment> {
+    const [assignment] = await db
+      .update(userLicenseAssignments)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(userLicenseAssignments.id, id))
+      .returning();
+    return assignment;
+  }
+
+  async deleteUserLicenseAssignment(id: number): Promise<boolean> {
+    const result = await db.delete(userLicenseAssignments).where(eq(userLicenseAssignments.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async assignLicenseToUser(userId: number, licenseType: string, licenseId: number, assignedBy: string, reason?: string): Promise<UserLicenseAssignment> {
+    const assignment: InsertUserLicenseAssignment = {
+      userId,
+      licenseType,
+      licenseId,
+      assignedBy,
+      assignmentReason: reason,
+      brand: "blorcs" // Default brand, could be determined from user context
+    };
+
+    return await this.createUserLicenseAssignment(assignment);
+  }
+
+  async revokeLicenseFromUser(assignmentId: number, revokedBy: string, reason?: string): Promise<boolean> {
+    const updateData = {
+      status: "revoked" as const,
+      notes: `Revoked by ${revokedBy}. Reason: ${reason || "Not specified"}`,
+      updatedAt: new Date()
+    };
+
+    const [updated] = await db
+      .update(userLicenseAssignments)
+      .set(updateData)
+      .where(eq(userLicenseAssignments.id, assignmentId))
+      .returning();
+
+    return !!updated;
+  }
+
+  // Microsoft License KPIs
+  async getMicrosoftLicenseKpis(brand?: string, month?: number, year?: number): Promise<MicrosoftLicenseKpis[]> {
+    let query = db.select().from(microsoftLicenseKpis);
+    
+    if (brand && brand !== "all") {
+      query = query.where(eq(microsoftLicenseKpis.brand, brand));
+    }
+    
+    if (month && year) {
+      query = query.where(eq(microsoftLicenseKpis.month, month)).where(eq(microsoftLicenseKpis.year, year));
+    }
+    
+    return await query;
+  }
+
+  async getMicrosoftLicenseKpi(id: number): Promise<MicrosoftLicenseKpis | undefined> {
+    const [kpi] = await db.select().from(microsoftLicenseKpis).where(eq(microsoftLicenseKpis.id, id));
+    return kpi || undefined;
+  }
+
+  async createMicrosoftLicenseKpis(insertKpis: InsertMicrosoftLicenseKpis): Promise<MicrosoftLicenseKpis> {
+    const [kpis] = await db
+      .insert(microsoftLicenseKpis)
+      .values(insertKpis)
+      .returning();
+    return kpis;
+  }
+
+  async updateMicrosoftLicenseKpis(id: number, updateData: Partial<InsertMicrosoftLicenseKpis>): Promise<MicrosoftLicenseKpis> {
+    const [kpis] = await db
+      .update(microsoftLicenseKpis)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(microsoftLicenseKpis.id, id))
+      .returning();
+    return kpis;
+  }
+
+  async deleteMicrosoftLicenseKpis(id: number): Promise<boolean> {
+    const result = await db.delete(microsoftLicenseKpis).where(eq(microsoftLicenseKpis.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async syncMicrosoftLicenseData(tenantId: string, brand: string): Promise<MicrosoftLicenseKpis> {
+    // This method would typically call Microsoft Graph API to sync real license data
+    // For now, we'll create sample KPI data
+    const currentDate = new Date();
+    const kpiData: InsertMicrosoftLicenseKpis = {
+      tenantId,
+      month: currentDate.getMonth() + 1,
+      year: currentDate.getFullYear(),
+      totalLicenses: 500,
+      assignedLicenses: 425,
+      unassignedLicenses: 75,
+      utilizationRate: "85.00",
+      costPerMonth: "52500.00",
+      costPerLicense: "123.53",
+      activeUsers: 398,
+      inactiveUsers: 27,
+      newAssignments: 15,
+      revokedLicenses: 8,
+      expiringLicenses: 12,
+      m365E3Licenses: 300,
+      m365E5Licenses: 100,
+      m365F3Licenses: 50,
+      powerBiLicenses: 75,
+      teamsLicenses: 425,
+      azureAdP1Licenses: 200,
+      azureAdP2Licenses: 100,
+      intuneDeviceLicenses: 425,
+      defenderLicenses: 300,
+      complianceScore: "88.5",
+      securityScore: "92.3",
+      lastSyncDate: new Date(),
+      brand
+    };
+
+    return await this.createMicrosoftLicenseKpis(kpiData);
   }
 }
 

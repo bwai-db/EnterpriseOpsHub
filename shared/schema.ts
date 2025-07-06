@@ -753,6 +753,139 @@ export const supplyChainKpis = pgTable("supply_chain_kpis", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Licensing Management Tables
+export const corporateLicensePacks = pgTable("corporate_license_packs", {
+  id: serial("id").primaryKey(),
+  packName: text("pack_name").notNull(),
+  packType: text("pack_type").notNull(), // microsoft_365, enterprise_mobility, azure, power_platform, dynamics, custom
+  description: text("description"),
+  vendor: text("vendor").notNull(), // microsoft, adobe, salesforce, etc.
+  totalLicenses: integer("total_licenses").notNull().default(0),
+  availableLicenses: integer("available_licenses").notNull().default(0),
+  assignedLicenses: integer("assigned_licenses").notNull().default(0),
+  costPerLicense: decimal("cost_per_license", { precision: 10, scale: 2 }),
+  totalCost: decimal("total_cost", { precision: 15, scale: 2 }),
+  renewalDate: date("renewal_date"),
+  purchaseDate: date("purchase_date"),
+  contractTerm: integer("contract_term"), // in months
+  autoRenewal: boolean("auto_renewal").default(false),
+  licenseKey: text("license_key"),
+  features: text("features").array(), // array of included features
+  restrictions: text("restrictions"),
+  complianceNotes: text("compliance_notes"),
+  contactEmail: text("contact_email"),
+  status: text("status").notNull().default("active"), // active, inactive, expired, pending_renewal
+  brand: text("brand").notNull(), // blorcs, shaypops, all
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const entitlementLicenses = pgTable("entitlement_licenses", {
+  id: serial("id").primaryKey(),
+  licenseName: text("license_name").notNull(),
+  licenseType: text("license_type").notNull(), // user, device, subscription, perpetual, concurrent
+  category: text("category").notNull(), // productivity, security, development, analytics, communication
+  vendor: text("vendor").notNull(),
+  packId: integer("pack_id").references(() => corporateLicensePacks.id),
+  sku: text("sku"), // vendor SKU
+  productId: text("product_id"), // vendor product ID
+  servicePlanId: text("service_plan_id"), // for Microsoft licenses
+  maxAssignments: integer("max_assignments"), // maximum concurrent assignments
+  currentAssignments: integer("current_assignments").notNull().default(0),
+  unitCost: decimal("unit_cost", { precision: 10, scale: 2 }),
+  billingCycle: text("billing_cycle"), // monthly, annual, one_time
+  features: text("features").array(),
+  prerequisites: text("prerequisites").array(), // required licenses or conditions
+  compatiblePlatforms: text("compatible_platforms").array(), // windows, mac, ios, android, web
+  lastSyncDate: timestamp("last_sync_date"),
+  syncSource: text("sync_source"), // microsoft_graph, manual, api_sync
+  status: text("status").notNull().default("active"),
+  brand: text("brand").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const specializedLicenses = pgTable("specialized_licenses", {
+  id: serial("id").primaryKey(),
+  licenseName: text("license_name").notNull(),
+  licenseType: text("license_type").notNull(), // professional, enterprise, premium, add_on
+  specialization: text("specialization").notNull(), // advanced_threat_protection, power_bi_premium, dynamics_sales, etc.
+  vendor: text("vendor").notNull(),
+  packId: integer("pack_id").references(() => corporateLicensePacks.id),
+  sku: text("sku"),
+  productId: text("product_id"),
+  departmentRestriction: text("department_restriction"), // specific departments that can use this
+  roleRestriction: text("role_restriction"), // specific roles that can use this
+  geographicRestriction: text("geographic_restriction"), // geographic limitations
+  maxUsers: integer("max_users"),
+  currentUsers: integer("current_users").notNull().default(0),
+  unitCost: decimal("unit_cost", { precision: 10, scale: 2 }),
+  specialFeatures: text("special_features").array(),
+  complianceRequirements: text("compliance_requirements").array(),
+  trainingRequired: boolean("training_required").default(false),
+  approvalRequired: boolean("approval_required").default(true),
+  lastSyncDate: timestamp("last_sync_date"),
+  syncSource: text("sync_source"),
+  status: text("status").notNull().default("active"),
+  brand: text("brand").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const userLicenseAssignments = pgTable("user_license_assignments", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  licenseType: text("license_type").notNull(), // corporate_pack, entitlement, specialized
+  licenseId: integer("license_id").notNull(), // references the appropriate license table
+  assignedDate: timestamp("assigned_date").defaultNow(),
+  expiryDate: timestamp("expiry_date"),
+  assignedBy: text("assigned_by").notNull(), // username of person who assigned
+  assignmentReason: text("assignment_reason"),
+  status: text("status").notNull().default("active"), // active, suspended, revoked, expired
+  lastUsedDate: timestamp("last_used_date"),
+  usageCount: integer("usage_count").default(0),
+  approvedBy: text("approved_by"),
+  approvalDate: timestamp("approval_date"),
+  notes: text("notes"),
+  brand: text("brand").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const microsoftLicenseKpis = pgTable("microsoft_license_kpis", {
+  id: serial("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  month: integer("month").notNull(), // 1-12
+  year: integer("year").notNull(),
+  totalLicenses: integer("total_licenses").notNull().default(0),
+  assignedLicenses: integer("assigned_licenses").notNull().default(0),
+  unassignedLicenses: integer("unassigned_licenses").notNull().default(0),
+  utilizationRate: decimal("utilization_rate", { precision: 5, scale: 2 }), // percentage
+  costPerMonth: decimal("cost_per_month", { precision: 15, scale: 2 }),
+  costPerLicense: decimal("cost_per_license", { precision: 10, scale: 2 }),
+  activeUsers: integer("active_users").default(0),
+  inactiveUsers: integer("inactive_users").default(0),
+  newAssignments: integer("new_assignments").default(0),
+  revokedLicenses: integer("revoked_licenses").default(0),
+  expiringLicenses: integer("expiring_licenses").default(0), // expiring in next 30 days
+  m365E3Licenses: integer("m365_e3_licenses").default(0),
+  m365E5Licenses: integer("m365_e5_licenses").default(0),
+  m365F3Licenses: integer("m365_f3_licenses").default(0),
+  powerBiLicenses: integer("power_bi_licenses").default(0),
+  teamsLicenses: integer("teams_licenses").default(0),
+  azureAdP1Licenses: integer("azure_ad_p1_licenses").default(0),
+  azureAdP2Licenses: integer("azure_ad_p2_licenses").default(0),
+  intuneDeviceLicenses: integer("intune_device_licenses").default(0),
+  defenderLicenses: integer("defender_licenses").default(0),
+  complianceScore: decimal("compliance_score", { precision: 5, scale: 2 }), // percentage
+  securityScore: decimal("security_score", { precision: 5, scale: 2 }), // percentage
+  lastSyncDate: timestamp("last_sync_date"),
+  syncSource: text("sync_source").default("microsoft_graph"),
+  brand: text("brand").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Manufacturing insert schemas
 export const insertManufacturerSchema = createInsertSchema(manufacturers).omit({
   id: true,
@@ -785,6 +918,37 @@ export const insertSupplierSchema = createInsertSchema(suppliers).omit({
 });
 
 export const insertSupplyChainKpisSchema = createInsertSchema(supplyChainKpis).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Licensing insert schemas
+export const insertCorporateLicensePackSchema = createInsertSchema(corporateLicensePacks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertEntitlementLicenseSchema = createInsertSchema(entitlementLicenses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSpecializedLicenseSchema = createInsertSchema(specializedLicenses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertUserLicenseAssignmentSchema = createInsertSchema(userLicenseAssignments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMicrosoftLicenseKpisSchema = createInsertSchema(microsoftLicenseKpis).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -1088,6 +1252,22 @@ export type Supplier = typeof suppliers.$inferSelect;
 
 export type InsertSupplyChainKpis = z.infer<typeof insertSupplyChainKpisSchema>;
 export type SupplyChainKpis = typeof supplyChainKpis.$inferSelect;
+
+// Licensing types
+export type InsertCorporateLicensePack = z.infer<typeof insertCorporateLicensePackSchema>;
+export type CorporateLicensePack = typeof corporateLicensePacks.$inferSelect;
+
+export type InsertEntitlementLicense = z.infer<typeof insertEntitlementLicenseSchema>;
+export type EntitlementLicense = typeof entitlementLicenses.$inferSelect;
+
+export type InsertSpecializedLicense = z.infer<typeof insertSpecializedLicenseSchema>;
+export type SpecializedLicense = typeof specializedLicenses.$inferSelect;
+
+export type InsertUserLicenseAssignment = z.infer<typeof insertUserLicenseAssignmentSchema>;
+export type UserLicenseAssignment = typeof userLicenseAssignments.$inferSelect;
+
+export type InsertMicrosoftLicenseKpis = z.infer<typeof insertMicrosoftLicenseKpisSchema>;
+export type MicrosoftLicenseKpis = typeof microsoftLicenseKpis.$inferSelect;
 
 // Enhanced retail types
 export type InsertStoreDisplay = z.infer<typeof insertStoreDisplaySchema>;

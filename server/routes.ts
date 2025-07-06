@@ -11,7 +11,9 @@ import {
   insertIntegrationLibrarySchema, insertIntegrationEndpointSchema, insertIntegrationCredentialSchema,
   insertManufacturerSchema, insertProductSchema, insertProductionOrderSchema, 
   insertManufacturingMetricsSchema, insertSupplierSchema, insertSupplyChainKpisSchema,
-  insertFacilitySchema, insertFacilityProjectSchema, insertFacilityImprovementSchema, insertFacilityRequestSchema, insertFacilityIncidentSchema
+  insertFacilitySchema, insertFacilityProjectSchema, insertFacilityImprovementSchema, insertFacilityRequestSchema, insertFacilityIncidentSchema,
+  insertCorporateLicensePackSchema, insertEntitlementLicenseSchema, insertSpecializedLicenseSchema,
+  insertUserLicenseAssignmentSchema, insertMicrosoftLicenseKpisSchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -1564,6 +1566,377 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid incident data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to create facility incident" });
+    }
+  });
+
+  // =====================================
+  // LICENSING MANAGEMENT ROUTES
+  // =====================================
+
+  // Corporate License Packs
+  app.get("/api/corporate-license-packs", async (req, res) => {
+    try {
+      const { brand } = req.query;
+      const packs = await storage.getCorporateLicensePacks(brand as string);
+      res.json(packs);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch corporate license packs" });
+    }
+  });
+
+  app.get("/api/corporate-license-packs/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const pack = await storage.getCorporateLicensePack(id);
+      if (!pack) {
+        return res.status(404).json({ message: "Corporate license pack not found" });
+      }
+      res.json(pack);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch corporate license pack" });
+    }
+  });
+
+  app.post("/api/corporate-license-packs", async (req, res) => {
+    try {
+      const packData = insertCorporateLicensePackSchema.parse(req.body);
+      const pack = await storage.createCorporateLicensePack(packData);
+      res.status(201).json(pack);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid license pack data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create corporate license pack" });
+    }
+  });
+
+  app.patch("/api/corporate-license-packs/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const packData = insertCorporateLicensePackSchema.partial().parse(req.body);
+      const pack = await storage.updateCorporateLicensePack(id, packData);
+      res.json(pack);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid license pack data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update corporate license pack" });
+    }
+  });
+
+  app.delete("/api/corporate-license-packs/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteCorporateLicensePack(id);
+      if (!success) {
+        return res.status(404).json({ message: "Corporate license pack not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete corporate license pack" });
+    }
+  });
+
+  // Entitlement Licenses
+  app.get("/api/entitlement-licenses", async (req, res) => {
+    try {
+      const { brand, packId } = req.query;
+      const licenses = await storage.getEntitlementLicenses(
+        brand as string,
+        packId ? parseInt(packId as string) : undefined
+      );
+      res.json(licenses);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch entitlement licenses" });
+    }
+  });
+
+  app.get("/api/entitlement-licenses/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const license = await storage.getEntitlementLicense(id);
+      if (!license) {
+        return res.status(404).json({ message: "Entitlement license not found" });
+      }
+      res.json(license);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch entitlement license" });
+    }
+  });
+
+  app.post("/api/entitlement-licenses", async (req, res) => {
+    try {
+      const licenseData = insertEntitlementLicenseSchema.parse(req.body);
+      const license = await storage.createEntitlementLicense(licenseData);
+      res.status(201).json(license);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid entitlement license data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create entitlement license" });
+    }
+  });
+
+  app.patch("/api/entitlement-licenses/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const licenseData = insertEntitlementLicenseSchema.partial().parse(req.body);
+      const license = await storage.updateEntitlementLicense(id, licenseData);
+      res.json(license);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid entitlement license data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update entitlement license" });
+    }
+  });
+
+  app.delete("/api/entitlement-licenses/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteEntitlementLicense(id);
+      if (!success) {
+        return res.status(404).json({ message: "Entitlement license not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete entitlement license" });
+    }
+  });
+
+  // Specialized Licenses
+  app.get("/api/specialized-licenses", async (req, res) => {
+    try {
+      const { brand, packId } = req.query;
+      const licenses = await storage.getSpecializedLicenses(
+        brand as string,
+        packId ? parseInt(packId as string) : undefined
+      );
+      res.json(licenses);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch specialized licenses" });
+    }
+  });
+
+  app.get("/api/specialized-licenses/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const license = await storage.getSpecializedLicense(id);
+      if (!license) {
+        return res.status(404).json({ message: "Specialized license not found" });
+      }
+      res.json(license);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch specialized license" });
+    }
+  });
+
+  app.post("/api/specialized-licenses", async (req, res) => {
+    try {
+      const licenseData = insertSpecializedLicenseSchema.parse(req.body);
+      const license = await storage.createSpecializedLicense(licenseData);
+      res.status(201).json(license);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid specialized license data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create specialized license" });
+    }
+  });
+
+  app.patch("/api/specialized-licenses/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const licenseData = insertSpecializedLicenseSchema.partial().parse(req.body);
+      const license = await storage.updateSpecializedLicense(id, licenseData);
+      res.json(license);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid specialized license data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update specialized license" });
+    }
+  });
+
+  app.delete("/api/specialized-licenses/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteSpecializedLicense(id);
+      if (!success) {
+        return res.status(404).json({ message: "Specialized license not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete specialized license" });
+    }
+  });
+
+  // User License Assignments
+  app.get("/api/user-license-assignments", async (req, res) => {
+    try {
+      const { brand, userId } = req.query;
+      const assignments = await storage.getUserLicenseAssignments(
+        brand as string,
+        userId ? parseInt(userId as string) : undefined
+      );
+      res.json(assignments);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch user license assignments" });
+    }
+  });
+
+  app.get("/api/user-license-assignments/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const assignment = await storage.getUserLicenseAssignment(id);
+      if (!assignment) {
+        return res.status(404).json({ message: "User license assignment not found" });
+      }
+      res.json(assignment);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch user license assignment" });
+    }
+  });
+
+  app.post("/api/user-license-assignments", async (req, res) => {
+    try {
+      const assignmentData = insertUserLicenseAssignmentSchema.parse(req.body);
+      const assignment = await storage.createUserLicenseAssignment(assignmentData);
+      res.status(201).json(assignment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid assignment data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create user license assignment" });
+    }
+  });
+
+  app.post("/api/user-license-assignments/assign", async (req, res) => {
+    try {
+      const { userId, licenseType, licenseId, assignedBy, reason } = req.body;
+      const assignment = await storage.assignLicenseToUser(userId, licenseType, licenseId, assignedBy, reason);
+      res.status(201).json(assignment);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to assign license to user" });
+    }
+  });
+
+  app.post("/api/user-license-assignments/:id/revoke", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { revokedBy, reason } = req.body;
+      const success = await storage.revokeLicenseFromUser(id, revokedBy, reason);
+      if (!success) {
+        return res.status(404).json({ message: "User license assignment not found" });
+      }
+      res.json({ message: "License revoked successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to revoke license from user" });
+    }
+  });
+
+  app.patch("/api/user-license-assignments/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const assignmentData = insertUserLicenseAssignmentSchema.partial().parse(req.body);
+      const assignment = await storage.updateUserLicenseAssignment(id, assignmentData);
+      res.json(assignment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid assignment data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update user license assignment" });
+    }
+  });
+
+  app.delete("/api/user-license-assignments/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteUserLicenseAssignment(id);
+      if (!success) {
+        return res.status(404).json({ message: "User license assignment not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete user license assignment" });
+    }
+  });
+
+  // Microsoft License KPIs
+  app.get("/api/microsoft-license-kpis", async (req, res) => {
+    try {
+      const { brand, month, year } = req.query;
+      const kpis = await storage.getMicrosoftLicenseKpis(
+        brand as string,
+        month ? parseInt(month as string) : undefined,
+        year ? parseInt(year as string) : undefined
+      );
+      res.json(kpis);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch Microsoft license KPIs" });
+    }
+  });
+
+  app.get("/api/microsoft-license-kpis/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const kpi = await storage.getMicrosoftLicenseKpi(id);
+      if (!kpi) {
+        return res.status(404).json({ message: "Microsoft license KPI not found" });
+      }
+      res.json(kpi);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch Microsoft license KPI" });
+    }
+  });
+
+  app.post("/api/microsoft-license-kpis", async (req, res) => {
+    try {
+      const kpiData = insertMicrosoftLicenseKpisSchema.parse(req.body);
+      const kpi = await storage.createMicrosoftLicenseKpis(kpiData);
+      res.status(201).json(kpi);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid KPI data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create Microsoft license KPIs" });
+    }
+  });
+
+  app.post("/api/microsoft-license-kpis/sync", async (req, res) => {
+    try {
+      const { tenantId, brand } = req.body;
+      const kpi = await storage.syncMicrosoftLicenseData(tenantId, brand);
+      res.status(201).json(kpi);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to sync Microsoft license data" });
+    }
+  });
+
+  app.patch("/api/microsoft-license-kpis/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const kpiData = insertMicrosoftLicenseKpisSchema.partial().parse(req.body);
+      const kpi = await storage.updateMicrosoftLicenseKpis(id, kpiData);
+      res.json(kpi);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid KPI data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update Microsoft license KPIs" });
+    }
+  });
+
+  app.delete("/api/microsoft-license-kpis/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteMicrosoftLicenseKpis(id);
+      if (!success) {
+        return res.status(404).json({ message: "Microsoft license KPI not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete Microsoft license KPIs" });
     }
   });
 

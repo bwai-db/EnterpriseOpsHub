@@ -4,6 +4,7 @@ import {
   LayoutDashboard, 
   Building, 
   Tag, 
+  Key,
   Cloud, 
   Ticket, 
   Truck, 
@@ -30,6 +31,7 @@ const navigationGroups = [
     items: [
       { name: "Vendor Management", href: "/vendors", icon: Building },
       { name: "Licensing", href: "/licensing", icon: Tag },
+      { name: "Licensing Management", href: "/licensing-management", icon: Key },
       { name: "Cloud Services", href: "/cloud-services", icon: Cloud },
       { name: "ITIL Management", href: "/itil", icon: Ticket },
       { name: "Service Management", href: "/service-management", icon: Database },
