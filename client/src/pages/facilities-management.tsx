@@ -182,7 +182,14 @@ export default function FacilitiesManagement({ selectedBrand }: FacilitiesManage
       const allCIs = await res.json() as ConfigurationItem[];
       
       // Filter CIs by facility location
-      return allCIs.filter(ci => ci.location.includes(selectedFacility.facilityCode));
+      console.log('Facility Code:', selectedFacility.facilityCode);
+      console.log('All CIs count:', allCIs.length);
+      console.log('Sample CI locations:', allCIs.slice(0, 3).map(ci => ci.location));
+      
+      const filteredCIs = allCIs.filter(ci => ci.location.includes(selectedFacility.facilityCode));
+      console.log('Filtered CIs count:', filteredCIs.length);
+      
+      return filteredCIs;
     },
     enabled: !!selectedFacility
   });
