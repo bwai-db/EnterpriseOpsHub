@@ -22,7 +22,9 @@ interface IntegrationCenterProps {
 export default function IntegrationCenter({ selectedBrand: initialBrand }: IntegrationCenterProps) {
   const [selectedBrand, setSelectedBrand] = useState<string>(initialBrand || "all");
   const [isLibraryDialogOpen, setIsLibraryDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedLibrary, setSelectedLibrary] = useState<IntegrationLibrary | null>(null);
+  const [editFormData, setEditFormData] = useState<Partial<IntegrationLibrary>>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -46,6 +48,20 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to delete integration library", variant: "destructive" });
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<IntegrationLibrary> }) => 
+      apiRequest('PUT', `/api/integration-libraries/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/integration-libraries'] });
+      setIsEditDialogOpen(false);
+      setEditFormData({});
+      toast({ title: "Success", description: "Integration library updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update integration library", variant: "destructive" });
     }
   });
 
@@ -94,6 +110,30 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
   const handleDelete = (id: number) => {
     if (confirm('Are you sure you want to delete this integration library?')) {
       deleteMutation.mutate(id);
+    }
+  };
+
+  const handleEdit = (library: IntegrationLibrary) => {
+    setSelectedLibrary(library);
+    setEditFormData({
+      name: library.name,
+      provider: library.provider,
+      category: library.category,
+      version: library.version,
+      description: library.description,
+      authMethod: library.authMethod,
+      baseUrl: library.baseUrl,
+      documentation: library.documentation
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdate = () => {
+    if (selectedLibrary && editFormData) {
+      updateMutation.mutate({ 
+        id: selectedLibrary.id, 
+        data: editFormData 
+      });
     }
   };
 
@@ -183,6 +223,123 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
               </div>
             </DialogContent>
           </Dialog>
+          
+          {/* Edit Library Dialog */}
+          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Edit Integration Library</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-name">Library Name</Label>
+                    <Input 
+                      id="edit-name" 
+                      value={editFormData.name || ''} 
+                      onChange={(e) => setEditFormData(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="e.g., Microsoft Graph API" 
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-provider">Provider</Label>
+                    <Input 
+                      id="edit-provider" 
+                      value={editFormData.provider || ''} 
+                      onChange={(e) => setEditFormData(prev => ({ ...prev, provider: e.target.value }))}
+                      placeholder="e.g., microsoft" 
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-category">Category</Label>
+                    <Select 
+                      value={editFormData.category || ''} 
+                      onValueChange={(value) => setEditFormData(prev => ({ ...prev, category: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="api">API</SelectItem>
+                        <SelectItem value="sdk">SDK</SelectItem>
+                        <SelectItem value="webhook">Webhook</SelectItem>
+                        <SelectItem value="middleware">Middleware</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-version">Version</Label>
+                    <Input 
+                      id="edit-version" 
+                      value={editFormData.version || ''} 
+                      onChange={(e) => setEditFormData(prev => ({ ...prev, version: e.target.value }))}
+                      placeholder="e.g., 1.0.0" 
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-auth">Auth Method</Label>
+                    <Select 
+                      value={editFormData.authMethod || ''} 
+                      onValueChange={(value) => setEditFormData(prev => ({ ...prev, authMethod: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select auth method" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="oauth2">OAuth 2.0</SelectItem>
+                        <SelectItem value="api_key">API Key</SelectItem>
+                        <SelectItem value="basic">Basic Auth</SelectItem>
+                        <SelectItem value="bearer">Bearer Token</SelectItem>
+                        <SelectItem value="none">None</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-baseurl">Base URL</Label>
+                    <Input 
+                      id="edit-baseurl" 
+                      value={editFormData.baseUrl || ''} 
+                      onChange={(e) => setEditFormData(prev => ({ ...prev, baseUrl: e.target.value }))}
+                      placeholder="e.g., https://graph.microsoft.com" 
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="edit-description">Description</Label>
+                  <Textarea 
+                    id="edit-description" 
+                    value={editFormData.description || ''} 
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Describe the integration library purpose and capabilities" 
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-documentation">Documentation URL</Label>
+                  <Input 
+                    id="edit-documentation" 
+                    value={editFormData.documentation || ''} 
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, documentation: e.target.value }))}
+                    placeholder="e.g., https://docs.microsoft.com/graph" 
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleUpdate}
+                    disabled={updateMutation.isPending}
+                  >
+                    {updateMutation.isPending ? 'Updating...' : 'Update Library'}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -266,7 +423,7 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
                         </a>
                       </Button>
                     )}
-                    <Button variant="outline" size="sm" onClick={() => setSelectedLibrary(library)}>
+                    <Button variant="outline" size="sm" onClick={() => handleEdit(library)}>
                       <Edit className="h-4 w-4 mr-1" />
                       Edit
                     </Button>
@@ -286,6 +443,13 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
                   </TabsList>
                   
                   <TabsContent value="endpoints" className="mt-4">
+                    <div className="flex justify-between items-center mb-4">
+                      <h4 className="text-sm font-medium text-gray-700">API Endpoints</h4>
+                      <Button size="sm" variant="outline">
+                        <Plus className="h-3 w-3 mr-1" />
+                        Add Endpoint
+                      </Button>
+                    </div>
                     {libraryEndpoints.length > 0 ? (
                       <Table>
                         <TableHeader>
@@ -295,6 +459,7 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
                             <TableHead>Description</TableHead>
                             <TableHead>Auth Required</TableHead>
                             <TableHead>Permissions</TableHead>
+                            <TableHead>Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -332,6 +497,16 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
                                   )}
                                 </div>
                               </TableCell>
+                              <TableCell>
+                                <div className="flex gap-1">
+                                  <Button variant="ghost" size="sm">
+                                    <Edit className="h-3 w-3" />
+                                  </Button>
+                                  <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -344,6 +519,13 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
                   </TabsContent>
                   
                   <TabsContent value="credentials" className="mt-4">
+                    <div className="flex justify-between items-center mb-4">
+                      <h4 className="text-sm font-medium text-gray-700">Authentication Credentials</h4>
+                      <Button size="sm" variant="outline">
+                        <Plus className="h-3 w-3 mr-1" />
+                        Add Credential
+                      </Button>
+                    </div>
                     {libraryCredentials.length > 0 ? (
                       <Table>
                         <TableHeader>
@@ -354,6 +536,7 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
                             <TableHead>Scopes</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead>Last Used</TableHead>
+                            <TableHead>Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -391,6 +574,16 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
                               </TableCell>
                               <TableCell className="text-sm text-gray-500">
                                 {credential.lastUsed ? new Date(credential.lastUsed).toLocaleDateString() : 'Never'}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-1">
+                                  <Button variant="ghost" size="sm">
+                                    <Edit className="h-3 w-3" />
+                                  </Button>
+                                  <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
                               </TableCell>
                             </TableRow>
                           ))}
