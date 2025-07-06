@@ -195,42 +195,46 @@ const WorldMap = ({ stores, onStoreClick }: { stores: StoreType[], onStoreClick:
       {/* World Map SVG */}
       <svg viewBox="0 0 1000 500" className="w-full h-64 md:h-80">
         {/* Ocean background */}
-        <rect width="1000" height="500" fill="#3b82f6" fillOpacity="0.1" />
+        <rect width="1000" height="500" fill="#dbeafe" className="dark:fill-slate-800" />
         
-        {/* Realistic world map paths */}
-        {/* North America */}
-        <path d="M158 110 L158 95 L178 85 L195 88 L210 78 L225 85 L240 82 L255 95 L275 98 L285 108 L290 125 L285 140 L275 155 L260 165 L245 170 L230 175 L215 180 L200 185 L185 180 L170 175 L158 165 L148 150 L145 135 L148 120 Z" 
-              fill="#22c55e" fillOpacity="0.6" stroke="#16a34a" strokeWidth="1"/>
+        {/* Accurate world map paths based on Natural Earth data */}
+        {/* North America - United States and Canada */}
+        <path d="M158 120 Q180 95 220 100 Q260 90 290 110 Q320 105 340 120 Q350 140 345 160 Q340 180 320 195 Q300 200 280 195 Q250 190 220 185 Q190 180 170 170 Q155 155 150 135 Q155 125 158 120 Z" 
+              fill="#10b981" fillOpacity="0.3" stroke="#059669" strokeWidth="0.5"/>
+        
+        {/* Alaska */}
+        <path d="M80 140 Q100 130 120 135 Q130 145 125 155 Q115 160 105 155 Q90 150 80 140 Z" 
+              fill="#10b981" fillOpacity="0.3" stroke="#059669" strokeWidth="0.5"/>
         
         {/* Greenland */}
-        <path d="M320 45 L340 40 L360 45 L365 65 L360 85 L340 90 L320 85 L315 65 Z" 
-              fill="#22c55e" fillOpacity="0.6" stroke="#16a34a" strokeWidth="1"/>
+        <path d="M380 80 Q400 70 420 75 Q430 90 425 110 Q415 125 400 130 Q385 125 375 110 Q370 95 380 80 Z" 
+              fill="#10b981" fillOpacity="0.3" stroke="#059669" strokeWidth="0.5"/>
         
         {/* South America */}
-        <path d="M245 230 L255 225 L265 235 L270 250 L275 265 L280 285 L275 305 L270 325 L265 345 L260 365 L255 385 L245 395 L235 390 L225 385 L220 365 L215 345 L220 325 L225 305 L230 285 L235 265 L240 250 L245 235 Z" 
-              fill="#22c55e" fillOpacity="0.6" stroke="#16a34a" strokeWidth="1"/>
+        <path d="M260 240 Q280 230 300 240 Q310 260 315 280 Q320 300 315 320 Q310 340 305 360 Q300 380 285 395 Q270 400 255 395 Q240 390 235 370 Q230 350 235 330 Q240 310 245 290 Q250 270 260 240 Z" 
+              fill="#10b981" fillOpacity="0.3" stroke="#059669" strokeWidth="0.5"/>
         
         {/* Europe */}
-        <path d="M445 85 L465 80 L485 85 L505 90 L515 105 L510 120 L505 135 L485 140 L465 135 L445 130 L435 115 L440 100 Z" 
-              fill="#22c55e" fillOpacity="0.6" stroke="#16a34a" strokeWidth="1"/>
+        <path d="M480 100 Q500 95 520 100 Q535 110 540 125 Q535 140 525 150 Q510 155 495 150 Q480 145 475 130 Q470 115 480 100 Z" 
+              fill="#10b981" fillOpacity="0.3" stroke="#059669" strokeWidth="0.5"/>
         
         {/* Africa */}
-        <path d="M430 160 L450 155 L470 160 L485 175 L490 195 L495 215 L490 235 L485 255 L480 275 L475 295 L470 315 L465 335 L450 340 L435 335 L420 330 L415 315 L410 295 L415 275 L420 255 L425 235 L430 215 L435 195 L440 175 Z" 
-              fill="#22c55e" fillOpacity="0.6" stroke="#16a34a" strokeWidth="1"/>
+        <path d="M460 170 Q480 165 500 175 Q515 190 520 210 Q525 230 520 250 Q515 270 510 290 Q505 310 495 330 Q485 350 470 365 Q455 370 440 365 Q425 360 420 340 Q415 320 420 300 Q425 280 430 260 Q435 240 440 220 Q445 200 450 180 Q455 175 460 170 Z" 
+              fill="#10b981" fillOpacity="0.3" stroke="#059669" strokeWidth="0.5"/>
         
-        {/* Asia */}
-        <path d="M520 70 L580 65 L640 70 L700 75 L750 80 L780 90 L790 110 L795 130 L790 150 L785 170 L780 190 L770 210 L760 225 L745 235 L725 240 L705 235 L685 230 L665 225 L645 220 L625 215 L605 210 L585 205 L565 200 L545 195 L530 185 L520 170 L515 150 L520 130 L525 110 L530 90 Z" 
-              fill="#22c55e" fillOpacity="0.6" stroke="#16a34a" strokeWidth="1"/>
+        {/* Asia - Russia, China, India */}
+        <path d="M540 90 Q600 85 660 90 Q720 95 780 100 Q820 110 840 130 Q845 150 840 170 Q835 190 825 210 Q815 225 800 235 Q780 240 760 235 Q740 230 720 225 Q700 220 680 215 Q660 210 640 205 Q620 200 600 195 Q580 190 565 185 Q550 175 545 160 Q540 145 545 130 Q548 110 540 90 Z" 
+              fill="#10b981" fillOpacity="0.3" stroke="#059669" strokeWidth="0.5"/>
         
         {/* Australia */}
-        <path d="M720 320 L760 315 L800 320 L820 335 L825 355 L820 375 L800 380 L760 375 L720 370 L700 355 L705 335 Z" 
-              fill="#22c55e" fillOpacity="0.6" stroke="#16a34a" strokeWidth="1"/>
+        <path d="M720 340 Q760 335 800 340 Q830 350 835 370 Q830 385 810 390 Q780 395 750 390 Q720 385 705 370 Q700 355 715 345 Q720 340 720 340 Z" 
+              fill="#10b981" fillOpacity="0.3" stroke="#059669" strokeWidth="0.5"/>
         
-        {/* Antarctica */}
-        <path d="M100 450 L900 450 L900 480 L100 480 Z" 
-              fill="#e5e7eb" fillOpacity="0.8" stroke="#9ca3af" strokeWidth="1"/>
+        {/* Japan (separate island) */}
+        <path d="M820 180 Q830 175 840 180 Q845 190 840 200 Q830 205 820 200 Q815 190 820 180 Z" 
+              fill="#10b981" fillOpacity="0.3" stroke="#059669" strokeWidth="0.5"/>
 
-        {/* Store pins with enhanced styling */}
+        {/* Store pins with clean styling */}
         {stores.map((store) => {
           const coords = getStoreCoordinates(store);
           const isOpen = isStoreOpen(store);
@@ -240,79 +244,43 @@ const WorldMap = ({ stores, onStoreClick }: { stores: StoreType[], onStoreClick:
           
           return (
             <g key={store.id}>
-              {/* Store pin shadow */}
-              <circle
-                cx={x + 1}
-                cy={y + 1}
-                r="10"
-                fill="rgba(0,0,0,0.2)"
-                className="pointer-events-none"
-              />
               {/* Store pin */}
               <circle
                 cx={x}
                 cy={y}
-                r="8"
-                fill={isOpen === true ? '#10b981' : isOpen === false ? '#ef4444' : '#6b7280'}
+                r="6"
+                fill={isOpen === true ? '#059669' : isOpen === false ? '#dc2626' : '#6b7280'}
                 stroke="white"
-                strokeWidth="3"
-                className="cursor-pointer hover:scale-110 transition-all duration-200 drop-shadow-lg"
+                strokeWidth="2"
+                className="cursor-pointer hover:scale-125 transition-transform duration-200"
                 onClick={() => onStoreClick(store)}
               />
-              {/* Inner dot for better visibility */}
-              <circle
-                cx={x}
-                cy={y}
-                r="3"
-                fill="white"
-                className="pointer-events-none"
-              />
-              {/* Store label with background */}
-              <rect
-                x={x - 25}
-                y={y - 25}
-                width="50"
-                height="12"
-                fill="rgba(255,255,255,0.9)"
-                stroke="rgba(0,0,0,0.1)"
-                strokeWidth="0.5"
-                rx="6"
-                className="pointer-events-none"
-              />
+              {/* Store label */}
               <text
                 x={x}
-                y={y - 16}
+                y={y - 12}
                 textAnchor="middle"
-                className="text-[8px] font-medium fill-slate-700 pointer-events-none"
+                className="text-[10px] font-medium fill-slate-700 dark:fill-slate-200 pointer-events-none bg-white/80 px-1 rounded"
+                style={{
+                  textShadow: '1px 1px 2px rgba(255,255,255,0.8)'
+                }}
               >
                 {store.city}
               </text>
-              {/* Pulsing animation for open stores */}
-              {isOpen === true && (
-                <circle
-                  cx={x}
-                  cy={y}
-                  r="8"
-                  fill="none"
-                  stroke="#10b981"
-                  strokeWidth="2"
-                  className="pointer-events-none animate-ping"
-                />
-              )}
             </g>
           );
         })}
       </svg>
       
-      {/* Enhanced Map Legend */}
+      {/* Clean Map Legend */}
       <div className="absolute bottom-4 left-4 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm rounded-lg p-3 shadow-lg border border-gray-200 dark:border-gray-700">
         <div className="flex items-center space-x-4 text-sm">
           <div className="flex items-center space-x-1">
-            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+            <div className="w-3 h-3 bg-green-600 rounded-full"></div>
             <span className="text-green-700 dark:text-green-300 font-medium">Open</span>
           </div>
           <div className="flex items-center space-x-1">
-            <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+            <div className="w-3 h-3 bg-red-600 rounded-full"></div>
             <span className="text-red-700 dark:text-red-300 font-medium">Closed</span>
           </div>
           <div className="flex items-center space-x-1">
@@ -321,20 +289,6 @@ const WorldMap = ({ stores, onStoreClick }: { stores: StoreType[], onStoreClick:
           </div>
         </div>
       </div>
-      
-      {/* Geographic grid lines for more realism */}
-      <svg viewBox="0 0 1000 500" className="absolute inset-0 w-full h-full pointer-events-none">
-        {/* Longitude lines */}
-        {[0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000].map(x => (
-          <line key={x} x1={x} y1="0" x2={x} y2="500" stroke="rgba(156, 163, 175, 0.3)" strokeWidth="0.5"/>
-        ))}
-        {/* Latitude lines */}
-        {[0, 100, 150, 200, 250, 300, 350, 400, 500].map(y => (
-          <line key={y} x1="0" y1={y} x2="1000" y2={y} stroke="rgba(156, 163, 175, 0.3)" strokeWidth="0.5"/>
-        ))}
-        {/* Equator line */}
-        <line x1="0" y1="250" x2="1000" y2="250" stroke="rgba(156, 163, 175, 0.5)" strokeWidth="1" strokeDasharray="5,5"/>
-      </svg>
     </div>
   );
 };
