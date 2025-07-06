@@ -2091,6 +2091,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Seed Realistic Staff
+  app.post("/api/seed/realistic-staff", async (req, res) => {
+    try {
+      await storage.seedRealisticStaff();
+      res.json({ message: "Successfully seeded realistic enterprise staff across all divisions and brands" });
+    } catch (error) {
+      console.error("Error seeding realistic staff:", error);
+      res.status(500).json({ message: "Failed to seed realistic staff" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
