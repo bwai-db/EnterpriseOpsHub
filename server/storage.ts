@@ -1,7 +1,7 @@
 import { 
   users, vendors, vendorTeamMembers, vendorAgreements, licenses, incidents, cloudServices,
   corporates, divisions, departments, functions, personas,
-  stores, storeInventory, storeSales, storeStaff,
+  stores, storeInventory, storeSales, storeStaff, storeDisplays, storeSchedules, keyholderAssignments, corporateMessages, messageAcknowledgments,
   serviceCategories, itilServices, configurationItems,
   serviceRelationships, ciRelationships, changeRequests, serviceLevelAgreements,
   distributionCenters, distributionCenterMetrics,
@@ -23,6 +23,11 @@ import {
   type StoreInventory, type InsertStoreInventory,
   type StoreSales, type InsertStoreSales,
   type StoreStaff, type InsertStoreStaff,
+  type StoreDisplay, type InsertStoreDisplay,
+  type StoreSchedule, type InsertStoreSchedule,
+  type KeyholderAssignment, type InsertKeyholderAssignment,
+  type CorporateMessage, type InsertCorporateMessage,
+  type MessageAcknowledgment, type InsertMessageAcknowledgment,
   type ServiceCategory, type InsertServiceCategory,
   type ItilService, type InsertItilService,
   type ConfigurationItem, type InsertConfigurationItem,
@@ -143,6 +148,36 @@ export interface IStorage {
   createStaffMember(staff: InsertStoreStaff): Promise<StoreStaff>;
   updateStaffMember(id: number, staff: Partial<InsertStoreStaff>): Promise<StoreStaff>;
   deleteStaffMember(id: number): Promise<boolean>;
+
+  // Enhanced Retail Operations
+  getStoreDisplays(storeId?: number, brand?: string): Promise<StoreDisplay[]>;
+  getStoreDisplay(id: number): Promise<StoreDisplay | undefined>;
+  createStoreDisplay(display: InsertStoreDisplay): Promise<StoreDisplay>;
+  updateStoreDisplay(id: number, display: Partial<InsertStoreDisplay>): Promise<StoreDisplay>;
+  deleteStoreDisplay(id: number): Promise<boolean>;
+
+  getStoreSchedules(storeId?: number, staffId?: number): Promise<StoreSchedule[]>;
+  getStoreSchedule(id: number): Promise<StoreSchedule | undefined>;
+  createStoreSchedule(schedule: InsertStoreSchedule): Promise<StoreSchedule>;
+  updateStoreSchedule(id: number, schedule: Partial<InsertStoreSchedule>): Promise<StoreSchedule>;
+  deleteStoreSchedule(id: number): Promise<boolean>;
+
+  getKeyholderAssignments(storeId?: number, staffId?: number): Promise<KeyholderAssignment[]>;
+  getKeyholderAssignment(id: number): Promise<KeyholderAssignment | undefined>;
+  createKeyholderAssignment(assignment: InsertKeyholderAssignment): Promise<KeyholderAssignment>;
+  updateKeyholderAssignment(id: number, assignment: Partial<InsertKeyholderAssignment>): Promise<KeyholderAssignment>;
+  deleteKeyholderAssignment(id: number): Promise<boolean>;
+
+  getCorporateMessages(brand?: string, targetAudience?: string): Promise<CorporateMessage[]>;
+  getCorporateMessage(id: number): Promise<CorporateMessage | undefined>;
+  createCorporateMessage(message: InsertCorporateMessage): Promise<CorporateMessage>;
+  updateCorporateMessage(id: number, message: Partial<InsertCorporateMessage>): Promise<CorporateMessage>;
+  deleteCorporateMessage(id: number): Promise<boolean>;
+
+  getMessageAcknowledgments(messageId?: number, storeId?: number): Promise<MessageAcknowledgment[]>;
+  getMessageAcknowledgment(id: number): Promise<MessageAcknowledgment | undefined>;
+  createMessageAcknowledgment(acknowledgment: InsertMessageAcknowledgment): Promise<MessageAcknowledgment>;
+  deleteMessageAcknowledgment(id: number): Promise<boolean>;
 
   // ITIL Service Management and CMDB
   getServiceCategories(brand?: string): Promise<ServiceCategory[]>;
@@ -832,6 +867,186 @@ export class DatabaseStorage implements IStorage {
 
   async deleteStaffMember(id: number): Promise<boolean> {
     const result = await db.delete(storeStaff).where(eq(storeStaff.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Enhanced Retail Operations Implementation
+  async getStoreDisplays(storeId?: number, brand?: string): Promise<StoreDisplay[]> {
+    if (storeId) {
+      return await db.select().from(storeDisplays).where(eq(storeDisplays.storeId, storeId));
+    } else if (brand && brand !== "all") {
+      return await db.select().from(storeDisplays).where(eq(storeDisplays.brand, brand));
+    }
+    return await db.select().from(storeDisplays);
+  }
+
+  async getStoreDisplay(id: number): Promise<StoreDisplay | undefined> {
+    const [display] = await db.select().from(storeDisplays).where(eq(storeDisplays.id, id));
+    return display || undefined;
+  }
+
+  async createStoreDisplay(insertDisplay: InsertStoreDisplay): Promise<StoreDisplay> {
+    const [display] = await db
+      .insert(storeDisplays)
+      .values(insertDisplay)
+      .returning();
+    return display;
+  }
+
+  async updateStoreDisplay(id: number, updateData: Partial<InsertStoreDisplay>): Promise<StoreDisplay> {
+    const [display] = await db
+      .update(storeDisplays)
+      .set(updateData)
+      .where(eq(storeDisplays.id, id))
+      .returning();
+    return display;
+  }
+
+  async deleteStoreDisplay(id: number): Promise<boolean> {
+    const result = await db.delete(storeDisplays).where(eq(storeDisplays.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async getStoreSchedules(storeId?: number, staffId?: number): Promise<StoreSchedule[]> {
+    if (storeId && staffId) {
+      return await db.select().from(storeSchedules).where(eq(storeSchedules.storeId, storeId)).where(eq(storeSchedules.staffId, staffId));
+    } else if (storeId) {
+      return await db.select().from(storeSchedules).where(eq(storeSchedules.storeId, storeId));
+    } else if (staffId) {
+      return await db.select().from(storeSchedules).where(eq(storeSchedules.staffId, staffId));
+    }
+    return await db.select().from(storeSchedules);
+  }
+
+  async getStoreSchedule(id: number): Promise<StoreSchedule | undefined> {
+    const [schedule] = await db.select().from(storeSchedules).where(eq(storeSchedules.id, id));
+    return schedule || undefined;
+  }
+
+  async createStoreSchedule(insertSchedule: InsertStoreSchedule): Promise<StoreSchedule> {
+    const [schedule] = await db
+      .insert(storeSchedules)
+      .values(insertSchedule)
+      .returning();
+    return schedule;
+  }
+
+  async updateStoreSchedule(id: number, updateData: Partial<InsertStoreSchedule>): Promise<StoreSchedule> {
+    const [schedule] = await db
+      .update(storeSchedules)
+      .set(updateData)
+      .where(eq(storeSchedules.id, id))
+      .returning();
+    return schedule;
+  }
+
+  async deleteStoreSchedule(id: number): Promise<boolean> {
+    const result = await db.delete(storeSchedules).where(eq(storeSchedules.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async getKeyholderAssignments(storeId?: number, staffId?: number): Promise<KeyholderAssignment[]> {
+    if (storeId && staffId) {
+      return await db.select().from(keyholderAssignments).where(eq(keyholderAssignments.storeId, storeId)).where(eq(keyholderAssignments.staffId, staffId));
+    } else if (storeId) {
+      return await db.select().from(keyholderAssignments).where(eq(keyholderAssignments.storeId, storeId));
+    } else if (staffId) {
+      return await db.select().from(keyholderAssignments).where(eq(keyholderAssignments.staffId, staffId));
+    }
+    return await db.select().from(keyholderAssignments);
+  }
+
+  async getKeyholderAssignment(id: number): Promise<KeyholderAssignment | undefined> {
+    const [assignment] = await db.select().from(keyholderAssignments).where(eq(keyholderAssignments.id, id));
+    return assignment || undefined;
+  }
+
+  async createKeyholderAssignment(insertAssignment: InsertKeyholderAssignment): Promise<KeyholderAssignment> {
+    const [assignment] = await db
+      .insert(keyholderAssignments)
+      .values(insertAssignment)
+      .returning();
+    return assignment;
+  }
+
+  async updateKeyholderAssignment(id: number, updateData: Partial<InsertKeyholderAssignment>): Promise<KeyholderAssignment> {
+    const [assignment] = await db
+      .update(keyholderAssignments)
+      .set(updateData)
+      .where(eq(keyholderAssignments.id, id))
+      .returning();
+    return assignment;
+  }
+
+  async deleteKeyholderAssignment(id: number): Promise<boolean> {
+    const result = await db.delete(keyholderAssignments).where(eq(keyholderAssignments.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async getCorporateMessages(brand?: string, targetAudience?: string): Promise<CorporateMessage[]> {
+    if (brand && brand !== "all" && targetAudience) {
+      return await db.select().from(corporateMessages).where(eq(corporateMessages.brand, brand)).where(eq(corporateMessages.targetAudience, targetAudience));
+    } else if (brand && brand !== "all") {
+      return await db.select().from(corporateMessages).where(eq(corporateMessages.brand, brand));
+    } else if (targetAudience) {
+      return await db.select().from(corporateMessages).where(eq(corporateMessages.targetAudience, targetAudience));
+    }
+    return await db.select().from(corporateMessages);
+  }
+
+  async getCorporateMessage(id: number): Promise<CorporateMessage | undefined> {
+    const [message] = await db.select().from(corporateMessages).where(eq(corporateMessages.id, id));
+    return message || undefined;
+  }
+
+  async createCorporateMessage(insertMessage: InsertCorporateMessage): Promise<CorporateMessage> {
+    const [message] = await db
+      .insert(corporateMessages)
+      .values(insertMessage)
+      .returning();
+    return message;
+  }
+
+  async updateCorporateMessage(id: number, updateData: Partial<InsertCorporateMessage>): Promise<CorporateMessage> {
+    const [message] = await db
+      .update(corporateMessages)
+      .set(updateData)
+      .where(eq(corporateMessages.id, id))
+      .returning();
+    return message;
+  }
+
+  async deleteCorporateMessage(id: number): Promise<boolean> {
+    const result = await db.delete(corporateMessages).where(eq(corporateMessages.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async getMessageAcknowledgments(messageId?: number, storeId?: number): Promise<MessageAcknowledgment[]> {
+    if (messageId && storeId) {
+      return await db.select().from(messageAcknowledgments).where(eq(messageAcknowledgments.messageId, messageId)).where(eq(messageAcknowledgments.storeId, storeId));
+    } else if (messageId) {
+      return await db.select().from(messageAcknowledgments).where(eq(messageAcknowledgments.messageId, messageId));
+    } else if (storeId) {
+      return await db.select().from(messageAcknowledgments).where(eq(messageAcknowledgments.storeId, storeId));
+    }
+    return await db.select().from(messageAcknowledgments);
+  }
+
+  async getMessageAcknowledgment(id: number): Promise<MessageAcknowledgment | undefined> {
+    const [acknowledgment] = await db.select().from(messageAcknowledgments).where(eq(messageAcknowledgments.id, id));
+    return acknowledgment || undefined;
+  }
+
+  async createMessageAcknowledgment(insertAcknowledgment: InsertMessageAcknowledgment): Promise<MessageAcknowledgment> {
+    const [acknowledgment] = await db
+      .insert(messageAcknowledgments)
+      .values(insertAcknowledgment)
+      .returning();
+    return acknowledgment;
+  }
+
+  async deleteMessageAcknowledgment(id: number): Promise<boolean> {
+    const result = await db.delete(messageAcknowledgments).where(eq(messageAcknowledgments.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
   }
 

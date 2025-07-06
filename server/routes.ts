@@ -5,6 +5,7 @@ import {
   insertVendorSchema, insertLicenseSchema, insertIncidentSchema, insertCloudServiceSchema,
   insertCorporateSchema, insertDivisionSchema, insertDepartmentSchema, insertFunctionSchema, insertPersonaSchema, insertUserSchema,
   insertStoreSchema, insertStoreInventorySchema, insertStoreSalesSchema, insertStoreStaffSchema,
+  insertStoreDisplaySchema, insertStoreScheduleSchema, insertKeyholderAssignmentSchema, insertCorporateMessageSchema, insertMessageAcknowledgmentSchema,
   insertServiceCategorySchema, insertItilServiceSchema, insertConfigurationItemSchema,
   insertChangeRequestSchema, insertServiceLevelAgreementSchema,
   insertIntegrationLibrarySchema, insertIntegrationEndpointSchema, insertIntegrationCredentialSchema,
@@ -663,6 +664,250 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid staff data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to create staff member" });
+    }
+  });
+
+  // Enhanced Retail Operations Routes
+  // Store Displays
+  app.get("/api/store-displays", async (req, res) => {
+    try {
+      const { storeId, brand } = req.query;
+      const displays = await storage.getStoreDisplays(
+        storeId ? parseInt(storeId as string) : undefined,
+        brand as string
+      );
+      res.json(displays);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch store displays" });
+    }
+  });
+
+  app.post("/api/store-displays", async (req, res) => {
+    try {
+      const displayData = insertStoreDisplaySchema.parse(req.body);
+      const display = await storage.createStoreDisplay(displayData);
+      res.status(201).json(display);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid display data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create store display" });
+    }
+  });
+
+  app.put("/api/store-displays/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const displayData = insertStoreDisplaySchema.partial().parse(req.body);
+      const display = await storage.updateStoreDisplay(id, displayData);
+      res.json(display);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid display data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update store display" });
+    }
+  });
+
+  app.delete("/api/store-displays/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteStoreDisplay(id);
+      if (!success) {
+        return res.status(404).json({ message: "Store display not found" });
+      }
+      res.json({ message: "Store display deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete store display" });
+    }
+  });
+
+  // Store Schedules
+  app.get("/api/store-schedules", async (req, res) => {
+    try {
+      const { storeId, staffId } = req.query;
+      const schedules = await storage.getStoreSchedules(
+        storeId ? parseInt(storeId as string) : undefined,
+        staffId ? parseInt(staffId as string) : undefined
+      );
+      res.json(schedules);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch store schedules" });
+    }
+  });
+
+  app.post("/api/store-schedules", async (req, res) => {
+    try {
+      const scheduleData = insertStoreScheduleSchema.parse(req.body);
+      const schedule = await storage.createStoreSchedule(scheduleData);
+      res.status(201).json(schedule);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid schedule data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create store schedule" });
+    }
+  });
+
+  app.put("/api/store-schedules/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const scheduleData = insertStoreScheduleSchema.partial().parse(req.body);
+      const schedule = await storage.updateStoreSchedule(id, scheduleData);
+      res.json(schedule);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid schedule data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update store schedule" });
+    }
+  });
+
+  app.delete("/api/store-schedules/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteStoreSchedule(id);
+      if (!success) {
+        return res.status(404).json({ message: "Store schedule not found" });
+      }
+      res.json({ message: "Store schedule deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete store schedule" });
+    }
+  });
+
+  // Keyholder Assignments
+  app.get("/api/keyholder-assignments", async (req, res) => {
+    try {
+      const { storeId, staffId } = req.query;
+      const assignments = await storage.getKeyholderAssignments(
+        storeId ? parseInt(storeId as string) : undefined,
+        staffId ? parseInt(staffId as string) : undefined
+      );
+      res.json(assignments);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch keyholder assignments" });
+    }
+  });
+
+  app.post("/api/keyholder-assignments", async (req, res) => {
+    try {
+      const assignmentData = insertKeyholderAssignmentSchema.parse(req.body);
+      const assignment = await storage.createKeyholderAssignment(assignmentData);
+      res.status(201).json(assignment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid assignment data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create keyholder assignment" });
+    }
+  });
+
+  app.put("/api/keyholder-assignments/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const assignmentData = insertKeyholderAssignmentSchema.partial().parse(req.body);
+      const assignment = await storage.updateKeyholderAssignment(id, assignmentData);
+      res.json(assignment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid assignment data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update keyholder assignment" });
+    }
+  });
+
+  app.delete("/api/keyholder-assignments/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteKeyholderAssignment(id);
+      if (!success) {
+        return res.status(404).json({ message: "Keyholder assignment not found" });
+      }
+      res.json({ message: "Keyholder assignment deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete keyholder assignment" });
+    }
+  });
+
+  // Corporate Messages
+  app.get("/api/corporate-messages", async (req, res) => {
+    try {
+      const { brand, targetAudience } = req.query;
+      const messages = await storage.getCorporateMessages(
+        brand as string,
+        targetAudience as string
+      );
+      res.json(messages);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch corporate messages" });
+    }
+  });
+
+  app.post("/api/corporate-messages", async (req, res) => {
+    try {
+      const messageData = insertCorporateMessageSchema.parse(req.body);
+      const message = await storage.createCorporateMessage(messageData);
+      res.status(201).json(message);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid message data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create corporate message" });
+    }
+  });
+
+  app.put("/api/corporate-messages/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const messageData = insertCorporateMessageSchema.partial().parse(req.body);
+      const message = await storage.updateCorporateMessage(id, messageData);
+      res.json(message);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid message data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update corporate message" });
+    }
+  });
+
+  app.delete("/api/corporate-messages/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteCorporateMessage(id);
+      if (!success) {
+        return res.status(404).json({ message: "Corporate message not found" });
+      }
+      res.json({ message: "Corporate message deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete corporate message" });
+    }
+  });
+
+  // Message Acknowledgments
+  app.get("/api/message-acknowledgments", async (req, res) => {
+    try {
+      const { messageId, storeId } = req.query;
+      const acknowledgments = await storage.getMessageAcknowledgments(
+        messageId ? parseInt(messageId as string) : undefined,
+        storeId ? parseInt(storeId as string) : undefined
+      );
+      res.json(acknowledgments);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch message acknowledgments" });
+    }
+  });
+
+  app.post("/api/message-acknowledgments", async (req, res) => {
+    try {
+      const acknowledgmentData = insertMessageAcknowledgmentSchema.parse(req.body);
+      const acknowledgment = await storage.createMessageAcknowledgment(acknowledgmentData);
+      res.status(201).json(acknowledgment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid acknowledgment data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create message acknowledgment" });
     }
   });
 

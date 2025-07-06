@@ -371,9 +371,106 @@ export const storeStaff = pgTable("store_staff", {
   hourlyRate: decimal("hourly_rate", { precision: 8, scale: 2 }),
   workSchedule: text("work_schedule"),
   emergencyContact: text("emergency_contact"),
+  isKeyholder: boolean("is_keyholder").default(false),
+  keyholderLevel: text("keyholder_level"), // junior, senior, manager, assistant_manager
+  certifications: text("certifications").array(),
+  languages: text("languages").array(),
   brand: text("brand").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const storeDisplays = pgTable("store_displays", {
+  id: serial("id").primaryKey(),
+  storeId: integer("store_id").references(() => stores.id).notNull(),
+  displayName: text("display_name").notNull(),
+  displayType: text("display_type").notNull(), // window, endcap, wall, floor, counter, seasonal
+  location: text("location").notNull(), // front_window, back_wall, center_floor, etc.
+  theme: text("theme"), // seasonal, promotional, brand_showcase, new_arrivals
+  products: text("products").array(), // SKUs of products on display
+  setupDate: timestamp("setup_date"),
+  takedownDate: timestamp("takedown_date"),
+  status: text("status").notNull().default("active"), // active, planned, archived
+  assignedTo: text("assigned_to"), // staff member responsible
+  notes: text("notes"),
+  photos: text("photos").array(), // URLs to display photos
+  performance: jsonb("performance"), // JSON object with metrics like conversion rate, engagement
+  brand: text("brand").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const storeSchedules = pgTable("store_schedules", {
+  id: serial("id").primaryKey(),
+  storeId: integer("store_id").references(() => stores.id).notNull(),
+  staffId: integer("staff_id").references(() => storeStaff.id).notNull(),
+  scheduleDate: date("schedule_date").notNull(),
+  startTime: text("start_time").notNull(), // HH:MM format
+  endTime: text("end_time").notNull(), // HH:MM format
+  shiftType: text("shift_type").notNull(), // opening, closing, mid, split
+  breakTime: text("break_time"), // JSON string with break times
+  position: text("position"), // cashier, sales_floor, stockroom, keyholder
+  status: text("status").notNull().default("scheduled"), // scheduled, confirmed, called_out, no_show
+  notes: text("notes"),
+  approvedBy: text("approved_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const keyholderAssignments = pgTable("keyholder_assignments", {
+  id: serial("id").primaryKey(),
+  storeId: integer("store_id").references(() => stores.id).notNull(),
+  staffId: integer("staff_id").references(() => storeStaff.id).notNull(),
+  assignmentDate: date("assignment_date").notNull(),
+  shiftType: text("shift_type").notNull(), // opening, closing, manager_on_duty
+  primaryKeyholder: boolean("primary_keyholder").default(false),
+  backupKeyholder: boolean("backup_keyholder").default(false),
+  accessLevel: text("access_level").notNull(), // basic, advanced, manager
+  keyCode: text("key_code"),
+  alarmCode: text("alarm_code"),
+  safeAccess: boolean("safe_access").default(false),
+  responsibilities: text("responsibilities").array(),
+  emergencyContact: text("emergency_contact"),
+  status: text("status").notNull().default("active"), // active, temporary, revoked
+  expiryDate: date("expiry_date"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const corporateMessages = pgTable("corporate_messages", {
+  id: serial("id").primaryKey(),
+  messageId: text("message_id").notNull().unique(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  messageType: text("message_type").notNull(), // announcement, policy, promotion, training, emergency
+  priority: text("priority").notNull(), // low, medium, high, urgent
+  sender: text("sender").notNull(),
+  senderRole: text("sender_role"),
+  targetAudience: text("target_audience").notNull(), // all_stores, specific_stores, managers, staff, keyholders
+  targetStores: text("target_stores").array(), // Store IDs if targeting specific stores
+  targetRoles: text("target_roles").array(), // Specific roles if targeting by role
+  scheduledDate: timestamp("scheduled_date"),
+  publishedDate: timestamp("published_date"),
+  expiryDate: timestamp("expiry_date"),
+  status: text("status").notNull().default("draft"), // draft, scheduled, published, archived
+  requiresAcknowledgment: boolean("requires_acknowledgment").default(false),
+  attachments: text("attachments").array(),
+  tags: text("tags").array(),
+  brand: text("brand").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const messageAcknowledgments = pgTable("message_acknowledgments", {
+  id: serial("id").primaryKey(),
+  messageId: integer("message_id").references(() => corporateMessages.id).notNull(),
+  storeId: integer("store_id").references(() => stores.id).notNull(),
+  staffId: integer("staff_id").references(() => storeStaff.id),
+  acknowledgedBy: text("acknowledged_by").notNull(),
+  acknowledgedDate: timestamp("acknowledged_date").defaultNow(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // ITIL Service Management and CMDB Tables
@@ -859,6 +956,35 @@ export const insertIntegrationCredentialSchema = createInsertSchema(integrationC
   lastUsed: true,
 });
 
+export const insertStoreDisplaySchema = createInsertSchema(storeDisplays).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertStoreScheduleSchema = createInsertSchema(storeSchedules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertKeyholderAssignmentSchema = createInsertSchema(keyholderAssignments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCorporateMessageSchema = createInsertSchema(corporateMessages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMessageAcknowledgmentSchema = createInsertSchema(messageAcknowledgments).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type InsertCorporate = z.infer<typeof insertCorporateSchema>;
 export type Corporate = typeof corporates.$inferSelect;
@@ -962,3 +1088,19 @@ export type Supplier = typeof suppliers.$inferSelect;
 
 export type InsertSupplyChainKpis = z.infer<typeof insertSupplyChainKpisSchema>;
 export type SupplyChainKpis = typeof supplyChainKpis.$inferSelect;
+
+// Enhanced retail types
+export type InsertStoreDisplay = z.infer<typeof insertStoreDisplaySchema>;
+export type StoreDisplay = typeof storeDisplays.$inferSelect;
+
+export type InsertStoreSchedule = z.infer<typeof insertStoreScheduleSchema>;
+export type StoreSchedule = typeof storeSchedules.$inferSelect;
+
+export type InsertKeyholderAssignment = z.infer<typeof insertKeyholderAssignmentSchema>;
+export type KeyholderAssignment = typeof keyholderAssignments.$inferSelect;
+
+export type InsertCorporateMessage = z.infer<typeof insertCorporateMessageSchema>;
+export type CorporateMessage = typeof corporateMessages.$inferSelect;
+
+export type InsertMessageAcknowledgment = z.infer<typeof insertMessageAcknowledgmentSchema>;
+export type MessageAcknowledgment = typeof messageAcknowledgments.$inferSelect;
