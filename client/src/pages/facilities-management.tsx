@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Building, MapPin, Users, Calendar, TrendingUp, AlertTriangle, Wrench, PlusCircle, Monitor, FileText, Activity } from "lucide-react";
+import { Building, MapPin, Users, Calendar, TrendingUp, AlertTriangle, Wrench, PlusCircle, Monitor, FileText, Activity, Server } from "lucide-react";
 import type { Brand } from "@/lib/types";
 
 interface FacilitiesManagementProps {
@@ -85,6 +85,22 @@ interface FacilityIncident {
   brand: string;
 }
 
+interface ConfigurationItem {
+  id: number;
+  ciName: string;
+  ciType: string;
+  ciClass: string;
+  status: string;
+  environment: string;
+  location: string;
+  assignedTo: string;
+  vendor: string;
+  model: string;
+  brand: string;
+  attributes?: any;
+  secureBaseline?: any;
+}
+
 export default function FacilitiesManagement({ selectedBrand }: FacilitiesManagementProps) {
   const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
@@ -149,6 +165,24 @@ export default function FacilitiesManagement({ selectedBrand }: FacilitiesManage
       const res = await fetch(`/api/facility-incidents?${params}`);
       if (!res.ok) throw new Error("Failed to fetch incidents");
       return res.json() as Promise<FacilityIncident[]>;
+    },
+    enabled: !!selectedFacility
+  });
+
+  // Fetch configuration items for selected facility
+  const { data: configurationItems = [], isLoading: cisLoading } = useQuery({
+    queryKey: ["/api/configuration-items", selectedFacility?.facilityCode, selectedBrand],
+    queryFn: async () => {
+      if (!selectedFacility) return [];
+      const params = new URLSearchParams();
+      if (selectedBrand !== "all") params.set('brand', selectedBrand);
+      
+      const res = await fetch(`/api/configuration-items?${params}`);
+      if (!res.ok) throw new Error("Failed to fetch configuration items");
+      const allCIs = await res.json() as ConfigurationItem[];
+      
+      // Filter CIs by facility location
+      return allCIs.filter(ci => ci.location.includes(selectedFacility.facilityCode));
     },
     enabled: !!selectedFacility
   });
@@ -279,13 +313,47 @@ export default function FacilitiesManagement({ selectedBrand }: FacilitiesManage
           </Card>
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Configuration Items</CardTitle>
+              <Server className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {configurationItems.length}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {configurationItems.filter(ci => ci.status === 'active').length} active configuration items
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Infrastructure Health</CardTitle>
+              <Monitor className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {configurationItems.length > 0 ? 
+                  Math.round((configurationItems.filter(ci => ci.status === 'active').length / configurationItems.length) * 100) : 0}%
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Operational status
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="projects">Projects</TabsTrigger>
             <TabsTrigger value="improvements">Improvements</TabsTrigger>
             <TabsTrigger value="requests">Requests</TabsTrigger>
             <TabsTrigger value="incidents">Incidents</TabsTrigger>
+            <TabsTrigger value="configuration">Configuration Items</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -606,6 +674,64 @@ export default function FacilitiesManagement({ selectedBrand }: FacilitiesManage
                 <AlertTriangle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-lg font-medium text-muted-foreground mb-2">No Incidents Found</h3>
                 <p className="text-sm text-muted-foreground">Facility incidents will appear here when reported.</p>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="configuration" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium">Configuration Items</h3>
+              <Button>
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Add Configuration Item
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {configurationItems.map((ci) => (
+                <Card key={ci.id}>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base">{ci.ciName}</CardTitle>
+                      <Badge className={getStatusColor(ci.status)}>
+                        {ci.status.replace('_', ' ')}
+                      </Badge>
+                    </div>
+                    <CardDescription>
+                      {ci.ciType.replace('_', ' ')} • {ci.ciClass}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Environment:</span>
+                        <Badge variant="outline">
+                          {ci.environment}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Vendor:</span>
+                        <span>{ci.vendor}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Model:</span>
+                        <span>{ci.model}</span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Location:</span>
+                        <p className="text-xs mt-1">{ci.location}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {configurationItems.length === 0 && (
+              <div className="text-center py-8">
+                <Server className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium text-muted-foreground mb-2">No Configuration Items Found</h3>
+                <p className="text-sm text-muted-foreground">Configuration items for this facility will appear here.</p>
               </div>
             )}
           </TabsContent>
