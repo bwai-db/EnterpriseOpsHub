@@ -528,6 +528,171 @@ export const distributionCenterMetrics = pgTable("distribution_center_metrics", 
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Manufacturing Management Tables
+export const manufacturers = pgTable("manufacturers", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  code: text("code").notNull().unique(), // MFG-001, MFG-002, etc.
+  type: text("type").notNull(), // internal, contract, joint_venture
+  location: text("location").notNull(),
+  address: text("address").notNull(),
+  city: text("city").notNull(),
+  state: text("state").notNull(),
+  country: text("country").notNull().default("US"),
+  primaryBrand: text("primary_brand").notNull(), // blorcs, shaypops
+  status: text("status").notNull().default("active"), // active, inactive, maintenance, certification_pending
+  capacity: integer("capacity"), // Units per day
+  currentUtilization: decimal("current_utilization", { precision: 5, scale: 2 }), // Percentage
+  qualityCertifications: text("quality_certifications").array(), // ISO9001, ISO14001, etc.
+  contactName: text("contact_name"),
+  contactEmail: text("contact_email"),
+  contactPhone: text("contact_phone"),
+  complianceStatus: text("compliance_status").notNull().default("compliant"), // compliant, pending, non_compliant
+  lastAuditDate: date("last_audit_date"),
+  nextAuditDate: date("next_audit_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const products = pgTable("products", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  sku: text("sku").notNull().unique(),
+  category: text("category").notNull(), // electronics, apparel, home_goods, etc.
+  brand: text("brand").notNull(), // blorcs, shaypops
+  description: text("description"),
+  unitCost: decimal("unit_cost", { precision: 10, scale: 2 }),
+  msrp: decimal("msrp", { precision: 10, scale: 2 }),
+  weight: decimal("weight", { precision: 8, scale: 3 }), // in kg
+  dimensions: jsonb("dimensions"), // {length, width, height} in cm
+  materials: text("materials").array(),
+  productionComplexity: text("production_complexity").notNull().default("medium"), // low, medium, high, critical
+  leadTime: integer("lead_time"), // in days
+  minOrderQuantity: integer("min_order_quantity").default(1),
+  status: text("status").notNull().default("active"), // active, discontinued, development
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const productionOrders = pgTable("production_orders", {
+  id: serial("id").primaryKey(),
+  orderNumber: text("order_number").notNull().unique(),
+  productId: integer("product_id").references(() => products.id),
+  manufacturerId: integer("manufacturer_id").references(() => manufacturers.id),
+  quantity: integer("quantity").notNull(),
+  status: text("status").notNull().default("pending"), // pending, in_progress, completed, cancelled, on_hold
+  priority: text("priority").notNull().default("medium"), // low, medium, high, urgent
+  orderDate: date("order_date").notNull(),
+  requiredDate: date("required_date").notNull(),
+  startDate: date("start_date"),
+  completionDate: date("completion_date"),
+  estimatedCost: decimal("estimated_cost", { precision: 12, scale: 2 }),
+  actualCost: decimal("actual_cost", { precision: 12, scale: 2 }),
+  qualityScore: decimal("quality_score", { precision: 3, scale: 1 }), // 0-10 scale
+  notes: text("notes"),
+  brand: text("brand").notNull(), // blorcs, shaypops
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const manufacturingMetrics = pgTable("manufacturing_metrics", {
+  id: serial("id").primaryKey(),
+  manufacturerId: integer("manufacturer_id").references(() => manufacturers.id),
+  productId: integer("product_id").references(() => products.id),
+  month: integer("month").notNull(), // 1-12
+  year: integer("year").notNull(),
+  unitsProduced: integer("units_produced").notNull().default(0),
+  defectRate: decimal("defect_rate", { precision: 5, scale: 2 }), // percentage
+  onTimeDeliveryRate: decimal("on_time_delivery_rate", { precision: 5, scale: 2 }), // percentage
+  averageLeadTime: decimal("average_lead_time", { precision: 8, scale: 2 }), // in days
+  costPerUnit: decimal("cost_per_unit", { precision: 10, scale: 2 }),
+  utilizationRate: decimal("utilization_rate", { precision: 5, scale: 2 }), // percentage
+  energyConsumption: decimal("energy_consumption", { precision: 12, scale: 2 }), // kWh
+  wasteGenerated: decimal("waste_generated", { precision: 8, scale: 2 }), // kg
+  safetyIncidents: integer("safety_incidents").default(0),
+  downtimeHours: decimal("downtime_hours", { precision: 8, scale: 2 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const suppliers = pgTable("suppliers", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  code: text("code").notNull().unique(),
+  type: text("type").notNull(), // raw_materials, components, packaging, services
+  category: text("category").notNull(), // electronics, textiles, metals, chemicals, etc.
+  location: text("location").notNull(),
+  country: text("country").notNull(),
+  contactName: text("contact_name"),
+  contactEmail: text("contact_email"),
+  contactPhone: text("contact_phone"),
+  paymentTerms: text("payment_terms"), // net_30, net_60, etc.
+  qualityRating: decimal("quality_rating", { precision: 3, scale: 1 }), // 1-10 scale
+  deliveryRating: decimal("delivery_rating", { precision: 3, scale: 1 }), // 1-10 scale
+  costRating: decimal("cost_rating", { precision: 3, scale: 1 }), // 1-10 scale
+  certifications: text("certifications").array(), // ISO certifications, etc.
+  riskLevel: text("risk_level").notNull().default("medium"), // low, medium, high, critical
+  status: text("status").notNull().default("active"), // active, inactive, blacklisted, pending_approval
+  brand: text("brand").notNull(), // blorcs, shaypops, all
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const supplyChainKpis = pgTable("supply_chain_kpis", {
+  id: serial("id").primaryKey(),
+  brand: text("brand").notNull(), // blorcs, shaypops, all
+  month: integer("month").notNull(), // 1-12
+  year: integer("year").notNull(),
+  totalProduction: integer("total_production").notNull().default(0),
+  productionCost: decimal("production_cost", { precision: 15, scale: 2 }),
+  averageLeadTime: decimal("average_lead_time", { precision: 8, scale: 2 }), // days
+  supplyChainEfficiency: decimal("supply_chain_efficiency", { precision: 5, scale: 2 }), // percentage
+  inventoryTurnover: decimal("inventory_turnover", { precision: 5, scale: 2 }),
+  orderFulfillmentRate: decimal("order_fulfillment_rate", { precision: 5, scale: 2 }), // percentage
+  supplierPerformanceScore: decimal("supplier_performance_score", { precision: 5, scale: 2 }), // percentage
+  sustainabilityScore: decimal("sustainability_score", { precision: 5, scale: 2 }), // percentage
+  riskMitigationScore: decimal("risk_mitigation_score", { precision: 5, scale: 2 }), // percentage
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Manufacturing insert schemas
+export const insertManufacturerSchema = createInsertSchema(manufacturers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProductSchema = createInsertSchema(products).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProductionOrderSchema = createInsertSchema(productionOrders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertManufacturingMetricsSchema = createInsertSchema(manufacturingMetrics).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSupplierSchema = createInsertSchema(suppliers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSupplyChainKpisSchema = createInsertSchema(supplyChainKpis).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Insert schemas
 export const insertCorporateSchema = createInsertSchema(corporates).omit({
   id: true,
@@ -778,3 +943,22 @@ export type IntegrationEndpoint = typeof integrationEndpoints.$inferSelect;
 
 export type InsertIntegrationCredential = z.infer<typeof insertIntegrationCredentialSchema>;
 export type IntegrationCredential = typeof integrationCredentials.$inferSelect;
+
+// Manufacturing types
+export type InsertManufacturer = z.infer<typeof insertManufacturerSchema>;
+export type Manufacturer = typeof manufacturers.$inferSelect;
+
+export type InsertProduct = z.infer<typeof insertProductSchema>;
+export type Product = typeof products.$inferSelect;
+
+export type InsertProductionOrder = z.infer<typeof insertProductionOrderSchema>;
+export type ProductionOrder = typeof productionOrders.$inferSelect;
+
+export type InsertManufacturingMetrics = z.infer<typeof insertManufacturingMetricsSchema>;
+export type ManufacturingMetrics = typeof manufacturingMetrics.$inferSelect;
+
+export type InsertSupplier = z.infer<typeof insertSupplierSchema>;
+export type Supplier = typeof suppliers.$inferSelect;
+
+export type InsertSupplyChainKpis = z.infer<typeof insertSupplyChainKpisSchema>;
+export type SupplyChainKpis = typeof supplyChainKpis.$inferSelect;

@@ -11,6 +11,7 @@ import Licensing from "@/pages/licensing";
 import CloudServices from "@/pages/cloud-services";
 import ITIL from "@/pages/itil";
 import SupplyChain from "@/pages/supply-chain";
+import Manufacturing from "@/pages/manufacturing";
 import Security from "@/pages/security";
 import HRService from "@/pages/hr-service";
 import People from "@/pages/people";
@@ -31,6 +32,7 @@ function Router({ selectedBrand }: { selectedBrand: Brand }) {
       <Route path="/cloud-services" component={() => <CloudServices selectedBrand={selectedBrand} />} />
       <Route path="/itil" component={() => <ITIL selectedBrand={selectedBrand} />} />
       <Route path="/supply-chain" component={() => <SupplyChain selectedBrand={selectedBrand} />} />
+      <Route path="/manufacturing" component={() => <Manufacturing selectedBrand={selectedBrand} />} />
       <Route path="/security" component={() => <Security selectedBrand={selectedBrand} />} />
       <Route path="/hr-service" component={() => <HRService selectedBrand={selectedBrand} />} />
       <Route path="/people" component={() => <People selectedBrand={selectedBrand} />} />

@@ -7,6 +7,7 @@ import {
   Cloud, 
   Ticket, 
   Truck, 
+  Factory,
   Shield, 
   Users,
   UserCheck,
@@ -38,6 +39,7 @@ const navigationGroups = [
     name: "Business Operations",
     items: [
       { name: "Supply Chain", href: "/supply-chain", icon: Truck },
+      { name: "Manufacturing", href: "/manufacturing", icon: Factory },
       { name: "Retail Operations", href: "/retail-operations", icon: ShoppingBag },
     ]
   },

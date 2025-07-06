@@ -6,6 +6,7 @@ import {
   serviceRelationships, ciRelationships, changeRequests, serviceLevelAgreements,
   distributionCenters, distributionCenterMetrics,
   integrationLibraries, integrationEndpoints, integrationCredentials,
+  manufacturers, products, productionOrders, manufacturingMetrics, suppliers, supplyChainKpis,
   type User, type InsertUser,
   type Vendor, type InsertVendor,
   type VendorTeamMember, type InsertVendorTeamMember,
@@ -33,7 +34,13 @@ import {
   type DistributionCenterMetrics, type InsertDistributionCenterMetrics,
   type IntegrationLibrary, type InsertIntegrationLibrary,
   type IntegrationEndpoint, type InsertIntegrationEndpoint,
-  type IntegrationCredential, type InsertIntegrationCredential
+  type IntegrationCredential, type InsertIntegrationCredential,
+  type Manufacturer, type InsertManufacturer,
+  type Product, type InsertProduct,
+  type ProductionOrder, type InsertProductionOrder,
+  type ManufacturingMetrics, type InsertManufacturingMetrics,
+  type Supplier, type InsertSupplier,
+  type SupplyChainKpis, type InsertSupplyChainKpis
 } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -189,6 +196,49 @@ export interface IStorage {
   createDistributionCenterMetrics(metrics: InsertDistributionCenterMetrics): Promise<DistributionCenterMetrics>;
   updateDistributionCenterMetrics(id: number, metrics: Partial<InsertDistributionCenterMetrics>): Promise<DistributionCenterMetrics>;
   deleteDistributionCenterMetrics(id: number): Promise<boolean>;
+
+  // Manufacturing Management
+  // Manufacturers
+  getManufacturers(brand?: string): Promise<Manufacturer[]>;
+  getManufacturer(id: number): Promise<Manufacturer | undefined>;
+  createManufacturer(manufacturer: InsertManufacturer): Promise<Manufacturer>;
+  updateManufacturer(id: number, manufacturer: Partial<InsertManufacturer>): Promise<Manufacturer>;
+  deleteManufacturer(id: number): Promise<boolean>;
+
+  // Products
+  getProducts(brand?: string): Promise<Product[]>;
+  getProduct(id: number): Promise<Product | undefined>;
+  createProduct(product: InsertProduct): Promise<Product>;
+  updateProduct(id: number, product: Partial<InsertProduct>): Promise<Product>;
+  deleteProduct(id: number): Promise<boolean>;
+
+  // Production Orders
+  getProductionOrders(brand?: string, manufacturerId?: number): Promise<ProductionOrder[]>;
+  getProductionOrder(id: number): Promise<ProductionOrder | undefined>;
+  createProductionOrder(order: InsertProductionOrder): Promise<ProductionOrder>;
+  updateProductionOrder(id: number, order: Partial<InsertProductionOrder>): Promise<ProductionOrder>;
+  deleteProductionOrder(id: number): Promise<boolean>;
+
+  // Manufacturing Metrics
+  getManufacturingMetrics(manufacturerId?: number, productId?: number, month?: number, year?: number): Promise<ManufacturingMetrics[]>;
+  getManufacturingMetric(id: number): Promise<ManufacturingMetrics | undefined>;
+  createManufacturingMetrics(metrics: InsertManufacturingMetrics): Promise<ManufacturingMetrics>;
+  updateManufacturingMetrics(id: number, metrics: Partial<InsertManufacturingMetrics>): Promise<ManufacturingMetrics>;
+  deleteManufacturingMetrics(id: number): Promise<boolean>;
+
+  // Suppliers
+  getSuppliers(brand?: string): Promise<Supplier[]>;
+  getSupplier(id: number): Promise<Supplier | undefined>;
+  createSupplier(supplier: InsertSupplier): Promise<Supplier>;
+  updateSupplier(id: number, supplier: Partial<InsertSupplier>): Promise<Supplier>;
+  deleteSupplier(id: number): Promise<boolean>;
+
+  // Supply Chain KPIs
+  getSupplyChainKpis(brand?: string, month?: number, year?: number): Promise<SupplyChainKpis[]>;
+  getSupplyChainKpi(id: number): Promise<SupplyChainKpis | undefined>;
+  createSupplyChainKpis(kpis: InsertSupplyChainKpis): Promise<SupplyChainKpis>;
+  updateSupplyChainKpis(id: number, kpis: Partial<InsertSupplyChainKpis>): Promise<SupplyChainKpis>;
+  deleteSupplyChainKpis(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1206,6 +1256,244 @@ export class DatabaseStorage implements IStorage {
 
   async deleteIntegrationCredential(id: number): Promise<boolean> {
     const result = await db.delete(integrationCredentials).where(eq(integrationCredentials.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Manufacturing Management Implementation
+  // Manufacturers
+  async getManufacturers(brand?: string): Promise<Manufacturer[]> {
+    let query = db.select().from(manufacturers);
+    if (brand && brand !== 'all') {
+      query = query.where(eq(manufacturers.primaryBrand, brand)) as any;
+    }
+    return await query;
+  }
+
+  async getManufacturer(id: number): Promise<Manufacturer | undefined> {
+    const [manufacturer] = await db.select().from(manufacturers).where(eq(manufacturers.id, id));
+    return manufacturer || undefined;
+  }
+
+  async createManufacturer(insertManufacturer: InsertManufacturer): Promise<Manufacturer> {
+    const [manufacturer] = await db
+      .insert(manufacturers)
+      .values(insertManufacturer)
+      .returning();
+    return manufacturer;
+  }
+
+  async updateManufacturer(id: number, updateData: Partial<InsertManufacturer>): Promise<Manufacturer> {
+    const [manufacturer] = await db
+      .update(manufacturers)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(manufacturers.id, id))
+      .returning();
+    return manufacturer;
+  }
+
+  async deleteManufacturer(id: number): Promise<boolean> {
+    const result = await db.delete(manufacturers).where(eq(manufacturers.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Products
+  async getProducts(brand?: string): Promise<Product[]> {
+    let query = db.select().from(products);
+    if (brand && brand !== 'all') {
+      query = query.where(eq(products.brand, brand)) as any;
+    }
+    return await query;
+  }
+
+  async getProduct(id: number): Promise<Product | undefined> {
+    const [product] = await db.select().from(products).where(eq(products.id, id));
+    return product || undefined;
+  }
+
+  async createProduct(insertProduct: InsertProduct): Promise<Product> {
+    const [product] = await db
+      .insert(products)
+      .values(insertProduct)
+      .returning();
+    return product;
+  }
+
+  async updateProduct(id: number, updateData: Partial<InsertProduct>): Promise<Product> {
+    const [product] = await db
+      .update(products)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(products.id, id))
+      .returning();
+    return product;
+  }
+
+  async deleteProduct(id: number): Promise<boolean> {
+    const result = await db.delete(products).where(eq(products.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Production Orders
+  async getProductionOrders(brand?: string, manufacturerId?: number): Promise<ProductionOrder[]> {
+    let query = db.select().from(productionOrders);
+    
+    const conditions = [];
+    if (brand && brand !== 'all') conditions.push(eq(productionOrders.brand, brand));
+    if (manufacturerId) conditions.push(eq(productionOrders.manufacturerId, manufacturerId));
+    
+    if (conditions.length > 0) {
+      query = query.where(conditions.reduce((acc, condition) => acc && condition)) as any;
+    }
+    
+    return await query;
+  }
+
+  async getProductionOrder(id: number): Promise<ProductionOrder | undefined> {
+    const [order] = await db.select().from(productionOrders).where(eq(productionOrders.id, id));
+    return order || undefined;
+  }
+
+  async createProductionOrder(insertOrder: InsertProductionOrder): Promise<ProductionOrder> {
+    const [order] = await db
+      .insert(productionOrders)
+      .values(insertOrder)
+      .returning();
+    return order;
+  }
+
+  async updateProductionOrder(id: number, updateData: Partial<InsertProductionOrder>): Promise<ProductionOrder> {
+    const [order] = await db
+      .update(productionOrders)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(productionOrders.id, id))
+      .returning();
+    return order;
+  }
+
+  async deleteProductionOrder(id: number): Promise<boolean> {
+    const result = await db.delete(productionOrders).where(eq(productionOrders.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Manufacturing Metrics
+  async getManufacturingMetrics(manufacturerId?: number, productId?: number, month?: number, year?: number): Promise<ManufacturingMetrics[]> {
+    let query = db.select().from(manufacturingMetrics);
+    
+    const conditions = [];
+    if (manufacturerId) conditions.push(eq(manufacturingMetrics.manufacturerId, manufacturerId));
+    if (productId) conditions.push(eq(manufacturingMetrics.productId, productId));
+    if (month) conditions.push(eq(manufacturingMetrics.month, month));
+    if (year) conditions.push(eq(manufacturingMetrics.year, year));
+    
+    if (conditions.length > 0) {
+      query = query.where(conditions.reduce((acc, condition) => acc && condition)) as any;
+    }
+    
+    return await query;
+  }
+
+  async getManufacturingMetric(id: number): Promise<ManufacturingMetrics | undefined> {
+    const [metric] = await db.select().from(manufacturingMetrics).where(eq(manufacturingMetrics.id, id));
+    return metric || undefined;
+  }
+
+  async createManufacturingMetrics(insertMetrics: InsertManufacturingMetrics): Promise<ManufacturingMetrics> {
+    const [metrics] = await db
+      .insert(manufacturingMetrics)
+      .values(insertMetrics)
+      .returning();
+    return metrics;
+  }
+
+  async updateManufacturingMetrics(id: number, updateData: Partial<InsertManufacturingMetrics>): Promise<ManufacturingMetrics> {
+    const [metrics] = await db
+      .update(manufacturingMetrics)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(manufacturingMetrics.id, id))
+      .returning();
+    return metrics;
+  }
+
+  async deleteManufacturingMetrics(id: number): Promise<boolean> {
+    const result = await db.delete(manufacturingMetrics).where(eq(manufacturingMetrics.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Suppliers
+  async getSuppliers(brand?: string): Promise<Supplier[]> {
+    let query = db.select().from(suppliers);
+    if (brand && brand !== 'all') {
+      query = query.where(eq(suppliers.brand, brand)) as any;
+    }
+    return await query;
+  }
+
+  async getSupplier(id: number): Promise<Supplier | undefined> {
+    const [supplier] = await db.select().from(suppliers).where(eq(suppliers.id, id));
+    return supplier || undefined;
+  }
+
+  async createSupplier(insertSupplier: InsertSupplier): Promise<Supplier> {
+    const [supplier] = await db
+      .insert(suppliers)
+      .values(insertSupplier)
+      .returning();
+    return supplier;
+  }
+
+  async updateSupplier(id: number, updateData: Partial<InsertSupplier>): Promise<Supplier> {
+    const [supplier] = await db
+      .update(suppliers)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(suppliers.id, id))
+      .returning();
+    return supplier;
+  }
+
+  async deleteSupplier(id: number): Promise<boolean> {
+    const result = await db.delete(suppliers).where(eq(suppliers.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Supply Chain KPIs
+  async getSupplyChainKpis(brand?: string, month?: number, year?: number): Promise<SupplyChainKpis[]> {
+    let query = db.select().from(supplyChainKpis);
+    
+    const conditions = [];
+    if (brand && brand !== 'all') conditions.push(eq(supplyChainKpis.brand, brand));
+    if (month) conditions.push(eq(supplyChainKpis.month, month));
+    if (year) conditions.push(eq(supplyChainKpis.year, year));
+    
+    if (conditions.length > 0) {
+      query = query.where(conditions.reduce((acc, condition) => acc && condition)) as any;
+    }
+    
+    return await query;
+  }
+
+  async getSupplyChainKpi(id: number): Promise<SupplyChainKpis | undefined> {
+    const [kpi] = await db.select().from(supplyChainKpis).where(eq(supplyChainKpis.id, id));
+    return kpi || undefined;
+  }
+
+  async createSupplyChainKpis(insertKpis: InsertSupplyChainKpis): Promise<SupplyChainKpis> {
+    const [kpis] = await db
+      .insert(supplyChainKpis)
+      .values(insertKpis)
+      .returning();
+    return kpis;
+  }
+
+  async updateSupplyChainKpis(id: number, updateData: Partial<InsertSupplyChainKpis>): Promise<SupplyChainKpis> {
+    const [kpis] = await db
+      .update(supplyChainKpis)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(supplyChainKpis.id, id))
+      .returning();
+    return kpis;
+  }
+
+  async deleteSupplyChainKpis(id: number): Promise<boolean> {
+    const result = await db.delete(supplyChainKpis).where(eq(supplyChainKpis.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
   }
 }

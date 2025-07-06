@@ -7,7 +7,9 @@ import {
   insertStoreSchema, insertStoreInventorySchema, insertStoreSalesSchema, insertStoreStaffSchema,
   insertServiceCategorySchema, insertItilServiceSchema, insertConfigurationItemSchema,
   insertChangeRequestSchema, insertServiceLevelAgreementSchema,
-  insertIntegrationLibrarySchema, insertIntegrationEndpointSchema, insertIntegrationCredentialSchema
+  insertIntegrationLibrarySchema, insertIntegrationEndpointSchema, insertIntegrationCredentialSchema,
+  insertManufacturerSchema, insertProductSchema, insertProductionOrderSchema, 
+  insertManufacturingMetricsSchema, insertSupplierSchema, insertSupplyChainKpisSchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -1013,6 +1015,163 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(credential);
     } catch (error) {
       res.status(500).json({ message: "Failed to update integration credential" });
+    }
+  });
+
+  // Manufacturing Management API Routes
+  // Manufacturers
+  app.get("/api/manufacturers", async (req, res) => {
+    try {
+      const { brand } = req.query;
+      const manufacturers = await storage.getManufacturers(brand as string);
+      res.json(manufacturers);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch manufacturers" });
+    }
+  });
+
+  app.post("/api/manufacturers", async (req, res) => {
+    try {
+      const manufacturerData = insertManufacturerSchema.parse(req.body);
+      const manufacturer = await storage.createManufacturer(manufacturerData);
+      res.status(201).json(manufacturer);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid manufacturer data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create manufacturer" });
+    }
+  });
+
+  // Products
+  app.get("/api/products", async (req, res) => {
+    try {
+      const { brand } = req.query;
+      const products = await storage.getProducts(brand as string);
+      res.json(products);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch products" });
+    }
+  });
+
+  app.post("/api/products", async (req, res) => {
+    try {
+      const productData = insertProductSchema.parse(req.body);
+      const product = await storage.createProduct(productData);
+      res.status(201).json(product);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid product data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create product" });
+    }
+  });
+
+  // Production Orders
+  app.get("/api/production-orders", async (req, res) => {
+    try {
+      const { brand, manufacturerId } = req.query;
+      const orders = await storage.getProductionOrders(
+        brand as string,
+        manufacturerId ? parseInt(manufacturerId as string) : undefined
+      );
+      res.json(orders);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch production orders" });
+    }
+  });
+
+  app.post("/api/production-orders", async (req, res) => {
+    try {
+      const orderData = insertProductionOrderSchema.parse(req.body);
+      const order = await storage.createProductionOrder(orderData);
+      res.status(201).json(order);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid production order data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create production order" });
+    }
+  });
+
+  // Manufacturing Metrics
+  app.get("/api/manufacturing-metrics", async (req, res) => {
+    try {
+      const { manufacturerId, productId, month, year } = req.query;
+      const metrics = await storage.getManufacturingMetrics(
+        manufacturerId ? parseInt(manufacturerId as string) : undefined,
+        productId ? parseInt(productId as string) : undefined,
+        month ? parseInt(month as string) : undefined,
+        year ? parseInt(year as string) : undefined
+      );
+      res.json(metrics);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch manufacturing metrics" });
+    }
+  });
+
+  app.post("/api/manufacturing-metrics", async (req, res) => {
+    try {
+      const metricsData = insertManufacturingMetricsSchema.parse(req.body);
+      const metrics = await storage.createManufacturingMetrics(metricsData);
+      res.status(201).json(metrics);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid metrics data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create manufacturing metrics" });
+    }
+  });
+
+  // Suppliers
+  app.get("/api/suppliers", async (req, res) => {
+    try {
+      const { brand } = req.query;
+      const suppliers = await storage.getSuppliers(brand as string);
+      res.json(suppliers);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch suppliers" });
+    }
+  });
+
+  app.post("/api/suppliers", async (req, res) => {
+    try {
+      const supplierData = insertSupplierSchema.parse(req.body);
+      const supplier = await storage.createSupplier(supplierData);
+      res.status(201).json(supplier);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid supplier data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create supplier" });
+    }
+  });
+
+  // Supply Chain KPIs
+  app.get("/api/supply-chain-kpis", async (req, res) => {
+    try {
+      const { brand, month, year } = req.query;
+      const kpis = await storage.getSupplyChainKpis(
+        brand as string,
+        month ? parseInt(month as string) : undefined,
+        year ? parseInt(year as string) : undefined
+      );
+      res.json(kpis);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch supply chain KPIs" });
+    }
+  });
+
+  app.post("/api/supply-chain-kpis", async (req, res) => {
+    try {
+      const kpiData = insertSupplyChainKpisSchema.parse(req.body);
+      const kpis = await storage.createSupplyChainKpis(kpiData);
+      res.status(201).json(kpis);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid KPI data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create supply chain KPIs" });
     }
   });
 
