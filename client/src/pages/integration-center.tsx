@@ -23,8 +23,10 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
   const [selectedBrand, setSelectedBrand] = useState<string>(initialBrand || "all");
   const [isLibraryDialogOpen, setIsLibraryDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isCredentialDialogOpen, setIsCredentialDialogOpen] = useState(false);
   const [selectedLibrary, setSelectedLibrary] = useState<IntegrationLibrary | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<IntegrationLibrary>>({});
+  const [credentialFormData, setCredentialFormData] = useState<Partial<IntegrationCredential>>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -62,6 +64,20 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to update integration library", variant: "destructive" });
+    }
+  });
+
+  const createCredentialMutation = useMutation({
+    mutationFn: (data: Partial<IntegrationCredential>) => 
+      apiRequest('POST', '/api/integration-credentials', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/integration-credentials'] });
+      setIsCredentialDialogOpen(false);
+      setCredentialFormData({});
+      toast({ title: "Success", description: "Credential created successfully" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to create credential", variant: "destructive" });
     }
   });
 
@@ -135,6 +151,135 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
         data: editFormData 
       });
     }
+  };
+
+  const handleCreateCredential = (libraryId: number) => {
+    setSelectedLibrary(libraries.find(l => l.id === libraryId) || null);
+    setCredentialFormData({
+      libraryId: libraryId,
+      environment: 'production',
+      credentialType: 'oauth2',
+      isActive: true
+    });
+    setIsCredentialDialogOpen(true);
+  };
+
+  const handleSaveCredential = () => {
+    if (credentialFormData.libraryId) {
+      createCredentialMutation.mutate(credentialFormData);
+    }
+  };
+
+  const generateGraphAppRegistrationScript = () => {
+    const script = `# Microsoft Graph API App Registration Script
+# Run this script as a Global Administrator in Azure AD
+
+# Connect to Microsoft Graph PowerShell
+Connect-MgGraph -Scopes "Application.ReadWrite.All", "DelegatedPermissionGrant.ReadWrite.All"
+
+# Define application settings
+$DisplayName = "Enterprise Operations Platform - Graph API"
+$RequiredResourceAccess = @(
+    @{
+        ResourceAppId = "00000003-0000-0000-c000-000000000000" # Microsoft Graph
+        ResourceAccess = @(
+            @{
+                Id = "e1fe6dd8-ba31-4d61-89e7-88639da4683d"  # User.Read
+                Type = "Scope"
+            },
+            @{
+                Id = "df021288-bdef-4463-88db-98f22de89214"  # User.Read.All
+                Type = "Role"
+            },
+            @{
+                Id = "62a82d76-70ea-41e2-9197-370581804d09"  # Group.ReadWrite.All
+                Type = "Role"
+            },
+            @{
+                Id = "19dbc75e-c2e2-444c-a770-ec69d8559fc7"  # Directory.ReadWrite.All
+                Type = "Role"
+            },
+            @{
+                Id = "246dd0d5-5bd0-4def-940b-0421030a5b68"  # Policy.Read.All
+                Type = "Role"
+            }
+        )
+    }
+)
+
+# Create the application
+$App = New-MgApplication -DisplayName $DisplayName -RequiredResourceAccess $RequiredResourceAccess
+
+# Create a service principal for the application
+$ServicePrincipal = New-MgServicePrincipal -AppId $App.AppId
+
+# Create a client secret
+$PasswordCredential = Add-MgApplicationPassword -ApplicationId $App.Id -PasswordCredential @{
+    DisplayName = "Enterprise Operations Platform Secret"
+    EndDateTime = (Get-Date).AddMonths(24)  # Valid for 2 years
+}
+
+# Get tenant information
+$Organization = Get-MgOrganization | Select-Object -First 1
+
+# Output the configuration details
+Write-Host "=== Application Registration Complete ===" -ForegroundColor Green
+Write-Host ""
+Write-Host "Application Details:" -ForegroundColor Yellow
+Write-Host "Application Name: $($App.DisplayName)"
+Write-Host "Application ID (Client ID): $($App.AppId)" -ForegroundColor Cyan
+Write-Host "Object ID: $($App.Id)"
+Write-Host "Tenant ID: $($Organization.Id)" -ForegroundColor Cyan
+Write-Host "Client Secret: $($PasswordCredential.SecretText)" -ForegroundColor Red
+Write-Host ""
+Write-Host "IMPORTANT: Save these values securely!" -ForegroundColor Red
+Write-Host "The client secret will not be shown again." -ForegroundColor Red
+Write-Host ""
+Write-Host "Required Permissions (Admin Consent Required):" -ForegroundColor Yellow
+Write-Host "- User.Read (Delegated)"
+Write-Host "- User.Read.All (Application)"
+Write-Host "- Group.ReadWrite.All (Application)"
+Write-Host "- Directory.ReadWrite.All (Application)"
+Write-Host "- Policy.Read.All (Application)"
+Write-Host ""
+Write-Host "Next Steps:" -ForegroundColor Yellow
+Write-Host "1. Grant admin consent for the required permissions"
+Write-Host "2. Add the Client ID, Tenant ID, and Client Secret to your application credentials"
+Write-Host "3. Configure the application to use these values"
+
+# Grant admin consent (requires Global Administrator)
+try {
+    Write-Host "Attempting to grant admin consent..." -ForegroundColor Yellow
+    $ConsentUrl = "https://login.microsoftonline.com/$($Organization.Id)/adminconsent?client_id=$($App.AppId)"
+    Write-Host "Admin consent URL: $ConsentUrl" -ForegroundColor Cyan
+    Write-Host "Opening browser for admin consent..." -ForegroundColor Yellow
+    Start-Process $ConsentUrl
+} catch {
+    Write-Host "Could not automatically open consent URL. Please visit manually:" -ForegroundColor Red
+    Write-Host $ConsentUrl -ForegroundColor Cyan
+}
+
+# Disconnect from Microsoft Graph
+Disconnect-MgGraph
+
+Write-Host ""
+Write-Host "Script execution completed!" -ForegroundColor Green`;
+
+    // Create a blob and download the script
+    const blob = new Blob([script], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'graph-api-app-registration.ps1';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({ 
+      title: "Script Generated", 
+      description: "PowerShell script downloaded. Run as Global Administrator in Azure AD." 
+    });
   };
 
   if (librariesLoading) {
@@ -340,6 +485,114 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
               </div>
             </DialogContent>
           </Dialog>
+          
+          {/* Add Credential Dialog */}
+          <Dialog open={isCredentialDialogOpen} onOpenChange={setIsCredentialDialogOpen}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Add Authentication Credential</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="cred-environment">Environment</Label>
+                    <Select 
+                      value={credentialFormData.environment || 'production'} 
+                      onValueChange={(value) => setCredentialFormData(prev => ({ ...prev, environment: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select environment" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="production">Production</SelectItem>
+                        <SelectItem value="development">Development</SelectItem>
+                        <SelectItem value="staging">Staging</SelectItem>
+                        <SelectItem value="testing">Testing</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="cred-type">Credential Type</Label>
+                    <Select 
+                      value={credentialFormData.credentialType || 'oauth2'} 
+                      onValueChange={(value) => setCredentialFormData(prev => ({ ...prev, credentialType: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select credential type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="oauth2">OAuth 2.0</SelectItem>
+                        <SelectItem value="api_key">API Key</SelectItem>
+                        <SelectItem value="basic_auth">Basic Auth</SelectItem>
+                        <SelectItem value="bearer_token">Bearer Token</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="cred-client-id">Client ID</Label>
+                    <Input 
+                      id="cred-client-id" 
+                      value={credentialFormData.clientId || ''} 
+                      onChange={(e) => setCredentialFormData(prev => ({ ...prev, clientId: e.target.value }))}
+                      placeholder="Enter client/application ID" 
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="cred-tenant-id">Tenant ID</Label>
+                    <Input 
+                      id="cred-tenant-id" 
+                      value={credentialFormData.tenantId || ''} 
+                      onChange={(e) => setCredentialFormData(prev => ({ ...prev, tenantId: e.target.value }))}
+                      placeholder="Enter tenant ID (for Azure AD)" 
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="cred-keyvault">Key Vault Reference</Label>
+                  <Input 
+                    id="cred-keyvault" 
+                    value={credentialFormData.keyVaultReference || ''} 
+                    onChange={(e) => setCredentialFormData(prev => ({ ...prev, keyVaultReference: e.target.value }))}
+                    placeholder="Key vault secret reference (e.g., keyvault-secret-name)" 
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="cred-scopes">Scopes (comma-separated)</Label>
+                  <Input 
+                    id="cred-scopes" 
+                    value={credentialFormData.scopes?.join(', ') || ''} 
+                    onChange={(e) => setCredentialFormData(prev => ({ 
+                      ...prev, 
+                      scopes: e.target.value.split(',').map(s => s.trim()).filter(s => s.length > 0)
+                    }))}
+                    placeholder="e.g., https://graph.microsoft.com/.default" 
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="cred-created-by">Created By</Label>
+                  <Input 
+                    id="cred-created-by" 
+                    value={credentialFormData.createdBy || ''} 
+                    onChange={(e) => setCredentialFormData(prev => ({ ...prev, createdBy: e.target.value }))}
+                    placeholder="Who created this credential" 
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setIsCredentialDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleSaveCredential}
+                    disabled={createCredentialMutation.isPending}
+                  >
+                    {createCredentialMutation.isPending ? 'Creating...' : 'Create Credential'}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -521,7 +774,7 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
                   <TabsContent value="credentials" className="mt-4">
                     <div className="flex justify-between items-center mb-4">
                       <h4 className="text-sm font-medium text-gray-700">Authentication Credentials</h4>
-                      <Button size="sm" variant="outline">
+                      <Button size="sm" variant="outline" onClick={() => handleCreateCredential(library.id)}>
                         <Plus className="h-3 w-3 mr-1" />
                         Add Credential
                       </Button>
@@ -597,6 +850,25 @@ export default function IntegrationCenter({ selectedBrand: initialBrand }: Integ
                   </TabsContent>
                   
                   <TabsContent value="config" className="mt-4">
+                    {library.name === "Microsoft Graph API" && (
+                      <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex justify-between items-center mb-3">
+                          <h4 className="font-semibold text-blue-900">Azure App Registration Setup</h4>
+                          <Button 
+                            size="sm" 
+                            onClick={() => generateGraphAppRegistrationScript()}
+                            className="bg-blue-600 hover:bg-blue-700"
+                          >
+                            <Code className="h-3 w-3 mr-1" />
+                            Generate PowerShell Script
+                          </Button>
+                        </div>
+                        <p className="text-sm text-blue-700">
+                          Generate a PowerShell script for your admin to register the Microsoft Graph API application 
+                          and configure the necessary permissions and credentials.
+                        </p>
+                      </div>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <h4 className="font-semibold mb-3">Base Configuration</h4>
