@@ -2102,6 +2102,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // License redistribution endpoint
+  app.post("/api/licenses/redistribute", async (req, res) => {
+    try {
+      const { recommendations } = req.body;
+      
+      if (!recommendations || !Array.isArray(recommendations)) {
+        return res.status(400).json({ error: "Invalid recommendations data" });
+      }
+
+      // Simulate redistribution processing
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const results = {
+        processed: recommendations.length,
+        successful: recommendations.length,
+        failed: 0,
+        totalSavings: recommendations.length * 684, // Mock calculation
+        affectedUsers: recommendations.length * 2,
+        timestamp: new Date().toISOString()
+      };
+      
+      res.json({ success: true, data: results });
+    } catch (error) {
+      console.error("Error redistributing licenses:", error);
+      res.status(500).json({ error: "Failed to redistribute licenses" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -9,6 +9,7 @@ import Dashboard from "@/pages/dashboard";
 import Vendors from "@/pages/vendors";
 import Licensing from "@/pages/licensing";
 import LicensingManagement from "@/pages/licensing-management-new";
+import LicenseRedistribution from "@/pages/license-redistribution";
 import CloudServices from "@/pages/cloud-services";
 import ITIL from "@/pages/itil";
 import SupplyChain from "@/pages/supply-chain";
@@ -33,6 +34,7 @@ function Router({ selectedBrand }: { selectedBrand: Brand }) {
       <Route path="/vendors" component={() => <Vendors selectedBrand={selectedBrand} />} />
       <Route path="/licensing" component={() => <Licensing selectedBrand={selectedBrand} />} />
       <Route path="/licensing-management" component={() => <LicensingManagement />} />
+      <Route path="/license-redistribution" component={() => <LicenseRedistribution />} />
       <Route path="/cloud-services" component={() => <CloudServices selectedBrand={selectedBrand} />} />
       <Route path="/itil" component={() => <ITIL selectedBrand={selectedBrand} />} />
       <Route path="/supply-chain" component={() => <SupplyChain selectedBrand={selectedBrand} />} />

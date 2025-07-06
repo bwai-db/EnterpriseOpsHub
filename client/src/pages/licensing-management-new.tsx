@@ -12,8 +12,9 @@ import { apiRequest } from "@/lib/queryClient";
 import { 
   Brain, Zap, Target, PieChart, TrendingUp, TrendingDown, Activity, Clock, 
   CheckCircle, XCircle, Lightbulb, Sparkles, DollarSign, Users, Shield, 
-  Calendar, AlertTriangle, BarChart3, RefreshCw, Download, Filter
+  Calendar, AlertTriangle, BarChart3, RefreshCw, Download, Filter, ArrowRightLeft
 } from "lucide-react";
+import { useLocation } from "wouter";
 
 type BrandFilter = "all" | "blorcs" | "shaypops";
 
@@ -109,6 +110,7 @@ export default function LicensingManagement() {
   const [insightFilter, setInsightFilter] = useState<string>("all");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   // Mock KPI Data
   const mockKpis: LicenseKPIs = {
@@ -365,6 +367,10 @@ export default function LicensingManagement() {
                   <SelectItem value="security">Security</SelectItem>
                 </SelectContent>
               </Select>
+              <Button size="sm" onClick={() => setLocation("/license-redistribution")}>
+                <ArrowRightLeft className="h-4 w-4 mr-2" />
+                Redistribute Licenses
+              </Button>
               <Button size="sm">
                 <Zap className="h-4 w-4 mr-2" />
                 Auto-Optimize
