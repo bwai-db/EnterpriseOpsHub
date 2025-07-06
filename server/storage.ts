@@ -1172,15 +1172,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getConfigurationItems(brand?: string, serviceId?: number, ciClass?: string): Promise<ConfigurationItem[]> {
+    let query = db.select({
+      id: configurationItems.id,
+      ciName: configurationItems.ciName,
+      ciType: configurationItems.ciType,
+      ciClass: configurationItems.ciClass,
+      status: configurationItems.status,
+      environment: configurationItems.environment,
+      location: configurationItems.location,
+      assignedTo: configurationItems.assignedTo,
+      vendor: configurationItems.vendor,
+      model: configurationItems.model,
+      brand: configurationItems.brand,
+      attributes: configurationItems.attributes,
+      secureBaseline: configurationItems.secureBaseline,
+      createdAt: configurationItems.createdAt,
+      updatedAt: configurationItems.updatedAt
+    }).from(configurationItems);
+
     if (serviceId) {
-      return await db.select().from(configurationItems).where(eq(configurationItems.serviceId, serviceId));
+      query = query.where(eq(configurationItems.serviceId, serviceId));
     } else if (ciClass) {
-      return await db.select().from(configurationItems).where(eq(configurationItems.ciClass, ciClass));
+      query = query.where(eq(configurationItems.ciClass, ciClass));
     } else if (brand && brand !== "all") {
-      return await db.select().from(configurationItems).where(eq(configurationItems.brand, brand));
+      query = query.where(eq(configurationItems.brand, brand));
     }
     
-    return await db.select().from(configurationItems);
+    return await query;
   }
 
   async getConfigurationItem(id: number): Promise<ConfigurationItem | undefined> {
