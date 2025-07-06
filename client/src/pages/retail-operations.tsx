@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Store, MapPin, Users, Package, DollarSign, TrendingUp, Clock, Calendar, Key, MessageSquare, Monitor, ArrowLeft, Globe } from "lucide-react";
+import { Store, MapPin, Users, Package, DollarSign, TrendingUp, Clock, Calendar, Key, MessageSquare, Monitor, ArrowLeft, Globe, Settings } from "lucide-react";
 import type { Brand } from "@/lib/types";
 
 interface StoreType {
@@ -122,6 +122,21 @@ interface CorporateMessage {
   requiresAcknowledgment?: boolean;
   tags?: string[];
   brand: string;
+}
+
+interface ConfigurationItem {
+  id: number;
+  ciName: string;
+  ciType: string;
+  ciClass?: string;
+  status: string;
+  environment?: string;
+  location?: string;
+  brand: string;
+  vendor?: string;
+  model?: string;
+  attributes?: string;
+  secureBaseline?: string;
 }
 
 interface RetailOperationsProps {
@@ -404,6 +419,26 @@ export default function RetailOperations({ selectedBrand }: RetailOperationsProp
     }
   });
 
+  const { data: configurationItems = [] } = useQuery({
+    queryKey: ["/api/configuration-items", selectedBrand, selectedStore?.storeCode],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (selectedBrand !== "all") params.append("brand", selectedBrand);
+      const res = await fetch(`/api/configuration-items?${params}`);
+      if (!res.ok) throw new Error("Failed to fetch configuration items");
+      const allItems = await res.json() as ConfigurationItem[];
+      // Filter by store location if a store is selected
+      if (selectedStore) {
+        return allItems.filter(item => 
+          item.location?.includes(selectedStore.city) || 
+          item.ciName.includes(selectedStore.storeCode)
+        );
+      }
+      return allItems;
+    },
+    enabled: !!selectedStore
+  });
+
   const getStoresByRegion = () => {
     const regions: { [key: string]: StoreType[] } = {};
     stores.forEach(store => {
@@ -479,12 +514,13 @@ export default function RetailOperations({ selectedBrand }: RetailOperationsProp
 
         {/* Store Management Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="staff">Team ({staff.length})</TabsTrigger>
             <TabsTrigger value="displays">Displays ({displays.length})</TabsTrigger>
             <TabsTrigger value="schedules">Schedules</TabsTrigger>
             <TabsTrigger value="keyholders">Keyholders</TabsTrigger>
+            <TabsTrigger value="configuration">Configuration</TabsTrigger>
             <TabsTrigger value="messages">Messages</TabsTrigger>
           </TabsList>
 
@@ -812,6 +848,133 @@ export default function RetailOperations({ selectedBrand }: RetailOperationsProp
                     </Card>
                   ))}
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="configuration" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Configuration Items</CardTitle>
+                <CardDescription>
+                  IT infrastructure and configuration management for this store
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {configurationItems.map((ci) => {
+                    let attributes = {};
+                    let secureBaseline = {};
+                    try {
+                      attributes = ci.attributes ? JSON.parse(ci.attributes) : {};
+                      secureBaseline = ci.secureBaseline ? JSON.parse(ci.secureBaseline) : {};
+                    } catch (e) {
+                      // Handle malformed JSON gracefully
+                    }
+
+                    return (
+                      <Card key={ci.id} className="h-full">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-base font-medium truncate" title={ci.ciName}>
+                              {ci.ciName.replace(selectedStore?.storeCode || '', '').replace('-', ' ').trim()}
+                            </CardTitle>
+                            <Badge className={getStatusColor(ci.status)}>
+                              {ci.status}
+                            </Badge>
+                          </div>
+                          <CardDescription className="text-sm">
+                            {ci.ciType} • {ci.ciClass || 'General'}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Vendor:</span>
+                              <span className="font-medium">{ci.vendor || 'N/A'}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Model:</span>
+                              <span className="font-medium">{ci.model || 'N/A'}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Environment:</span>
+                              <Badge variant="outline" className="text-xs">
+                                {ci.environment || 'production'}
+                              </Badge>
+                            </div>
+                          </div>
+                          
+                          <Separator />
+                          
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-medium flex items-center">
+                              <Monitor className="h-4 w-4 mr-1" />
+                              Key Specifications
+                            </h4>
+                            <div className="text-xs space-y-1">
+                              {Object.entries(attributes).slice(0, 3).map(([key, value], idx) => (
+                                <div key={idx} className="flex justify-between">
+                                  <span className="text-muted-foreground capitalize">
+                                    {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:
+                                  </span>
+                                  <span className="font-mono text-xs">
+                                    {typeof value === 'object' ? JSON.stringify(value).slice(0, 20) + '...' : String(value).slice(0, 20)}
+                                    {String(value).length > 20 ? '...' : ''}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          <Separator />
+
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-medium flex items-center">
+                              <Key className="h-4 w-4 mr-1" />
+                              Security Baseline
+                            </h4>
+                            <div className="grid grid-cols-2 gap-1 text-xs">
+                              {Object.entries(secureBaseline).slice(0, 4).map(([key, value], idx) => (
+                                <div key={idx} className="flex items-center">
+                                  <div className={`w-2 h-2 rounded-full mr-1 ${
+                                    value === true ? 'bg-green-500' : 
+                                    value === false ? 'bg-red-500' : 
+                                    'bg-yellow-500'
+                                  }`} />
+                                  <span className="truncate" title={key}>
+                                    {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="flex justify-between items-center pt-2">
+                            <Button variant="outline" size="sm" className="text-xs">
+                              View Details
+                            </Button>
+                            <Button variant="outline" size="sm" className="text-xs">
+                              Edit Config
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+                
+                {configurationItems.length === 0 && (
+                  <div className="text-center py-8">
+                    <Monitor className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium text-muted-foreground mb-2">
+                      No Configuration Items Found
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Configuration items for this store will appear here once they are added to the CMDB.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
