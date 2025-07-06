@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Store, MapPin, Users, Package, DollarSign, TrendingUp, Clock, Calendar, Key, MessageSquare, Monitor, ArrowLeft } from "lucide-react";
+import { Store, MapPin, Users, Package, DollarSign, TrendingUp, Clock, Calendar, Key, MessageSquare, Monitor, ArrowLeft, Globe } from "lucide-react";
 import type { Brand } from "@/lib/types";
 
 interface StoreType {
@@ -128,9 +128,163 @@ interface RetailOperationsProps {
   selectedBrand: Brand;
 }
 
+const WorldMap = ({ stores, onStoreClick }: { stores: StoreType[], onStoreClick: (store: StoreType) => void }) => {
+  const getStoreCoordinates = (store: StoreType) => {
+    const coordinates: { [key: string]: { lat: number, lng: number } } = {
+      'Tokyo': { lat: 35.6762, lng: 139.6503 },
+      'Riyadh': { lat: 24.7136, lng: 46.6753 },
+      'Doha': { lat: 25.2854, lng: 51.5310 },
+      'Berlin': { lat: 52.5200, lng: 13.4050 },
+      'Frankfurt': { lat: 50.1109, lng: 8.6821 },
+      'Paris': { lat: 48.8566, lng: 2.3522 },
+      'Madrid': { lat: 40.4168, lng: -3.7038 },
+      'Anchorage': { lat: 61.2181, lng: -149.9003 },
+      'San Diego': { lat: 32.7157, lng: -117.1611 },
+      'Seattle': { lat: 47.6062, lng: -122.3321 },
+      'Denver': { lat: 39.7392, lng: -104.9903 },
+      'Aspen': { lat: 39.1911, lng: -106.8175 },
+      'Mexico City': { lat: 19.4326, lng: -99.1332 },
+      'São Paulo': { lat: -23.5505, lng: -46.6333 },
+      'Beijing': { lat: 39.9042, lng: 116.4074 },
+      'Singapore': { lat: 1.3521, lng: 103.8198 },
+      'Hong Kong': { lat: 22.3193, lng: 114.1694 },
+      'Tel Aviv': { lat: 32.0853, lng: 34.7818 }
+    };
+    return coordinates[store.city] || { lat: 0, lng: 0 };
+  };
+
+  const isStoreOpen = (store: StoreType) => {
+    if (!store.timezone || !store.operatingHours) return null;
+    
+    try {
+      const now = new Date();
+      const storeTime = new Date(now.toLocaleString("en-US", { timeZone: store.timezone }));
+      const currentHour = storeTime.getHours();
+      
+      // Parse operating hours (format: "10:00-21:00")
+      if (store.operatingHours.includes('-')) {
+        const [openTime, closeTime] = store.operatingHours.split('-');
+        const openHour = parseInt(openTime.split(':')[0]);
+        const closeHour = parseInt(closeTime.split(':')[0]);
+        
+        return currentHour >= openHour && currentHour < closeHour;
+      }
+    } catch (error) {
+      return null;
+    }
+    return null;
+  };
+
+  const getStoreLocalTime = (store: StoreType) => {
+    if (!store.timezone) return 'Unknown';
+    try {
+      const now = new Date();
+      return now.toLocaleString("en-US", {
+        timeZone: store.timezone,
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    } catch (error) {
+      return 'Unknown';
+    }
+  };
+
+  return (
+    <div className="relative bg-slate-50 dark:bg-slate-900 rounded-lg overflow-hidden">
+      {/* World Map SVG */}
+      <svg viewBox="0 0 1000 500" className="w-full h-64 md:h-80">
+        {/* Simplified world map outline */}
+        <rect width="1000" height="500" fill="currentColor" className="text-blue-100 dark:text-blue-900" />
+        
+        {/* Continents (simplified shapes) */}
+        {/* North America */}
+        <path d="M100 80 L280 80 L280 200 L100 200 Z" fill="currentColor" className="text-green-200 dark:text-green-800" />
+        
+        {/* South America */}
+        <path d="M180 250 L280 250 L280 400 L180 400 Z" fill="currentColor" className="text-green-200 dark:text-green-800" />
+        
+        {/* Europe */}
+        <path d="M400 80 L520 80 L520 180 L400 180 Z" fill="currentColor" className="text-green-200 dark:text-green-800" />
+        
+        {/* Africa */}
+        <path d="M380 200 L520 200 L520 380 L380 380 Z" fill="currentColor" className="text-green-200 dark:text-green-800" />
+        
+        {/* Asia */}
+        <path d="M520 60 L800 60 L800 280 L520 280 Z" fill="currentColor" className="text-green-200 dark:text-green-800" />
+        
+        {/* Australia */}
+        <path d="M720 350 L820 350 L820 400 L720 400 Z" fill="currentColor" className="text-green-200 dark:text-green-800" />
+
+        {/* Store pins */}
+        {stores.map((store) => {
+          const coords = getStoreCoordinates(store);
+          const isOpen = isStoreOpen(store);
+          // Convert lat/lng to SVG coordinates (simplified projection)
+          const x = ((coords.lng + 180) / 360) * 1000;
+          const y = ((90 - coords.lat) / 180) * 500;
+          
+          return (
+            <g key={store.id}>
+              {/* Store pin */}
+              <circle
+                cx={x}
+                cy={y}
+                r="8"
+                fill={isOpen === true ? '#10b981' : isOpen === false ? '#ef4444' : '#6b7280'}
+                stroke="white"
+                strokeWidth="2"
+                className="cursor-pointer hover:r-10 transition-all"
+                onClick={() => onStoreClick(store)}
+              />
+              {/* Store label */}
+              <text
+                x={x}
+                y={y - 12}
+                textAnchor="middle"
+                className="text-xs font-medium fill-slate-800 dark:fill-slate-200 pointer-events-none"
+              >
+                {store.city}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+      
+      {/* Map Legend */}
+      <div className="absolute bottom-4 left-4 bg-white dark:bg-slate-800 rounded-lg p-3 shadow-lg">
+        <div className="flex items-center space-x-4 text-sm">
+          <div className="flex items-center space-x-1">
+            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+            <span>Open</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+            <span>Closed</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
+            <span>Unknown</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function RetailOperations({ selectedBrand }: RetailOperationsProps) {
   const [selectedStore, setSelectedStore] = useState<StoreType | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Update time every minute for real-time store status
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000); // Update every minute
+
+    return () => clearInterval(timer);
+  }, []);
 
   const { data: stores = [], isLoading: storesLoading } = useQuery({
     queryKey: ["/api/stores", selectedBrand],
@@ -645,6 +799,31 @@ export default function RetailOperations({ selectedBrand }: RetailOperationsProp
     );
   }
 
+  // Store status summary
+  const getOpenStores = () => {
+    return stores.filter(store => {
+      if (!store.timezone || !store.operatingHours) return false;
+      try {
+        const now = new Date();
+        const storeTime = new Date(now.toLocaleString("en-US", { timeZone: store.timezone }));
+        const currentHour = storeTime.getHours();
+        
+        if (store.operatingHours.includes('-')) {
+          const [openTime, closeTime] = store.operatingHours.split('-');
+          const openHour = parseInt(openTime.split(':')[0]);
+          const closeHour = parseInt(closeTime.split(':')[0]);
+          
+          return currentHour >= openHour && currentHour < closeHour;
+        }
+      } catch (error) {
+        return false;
+      }
+      return false;
+    });
+  };
+
+  const openStores = getOpenStores();
+
   // Main store overview
   return (
     <div className="space-y-6">
@@ -660,8 +839,117 @@ export default function RetailOperations({ selectedBrand }: RetailOperationsProp
             <Store className="h-3 w-3 mr-1" />
             {stores.length} Stores
           </Badge>
+          <Badge variant="outline" className="flex items-center">
+            <Clock className="h-3 w-3 mr-1 text-green-600" />
+            {openStores.length} Open Now
+          </Badge>
         </div>
       </div>
+
+      {/* World Map with Store Locations */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center">
+                <Globe className="h-5 w-5 mr-2" />
+                Global Store Network
+              </CardTitle>
+              <CardDescription>
+                Real-time store status across {Object.keys(getStoresByRegion()).length} regions • Updated every minute
+              </CardDescription>
+            </div>
+            <div className="flex items-center space-x-4 text-sm">
+              <div className="flex items-center space-x-1">
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span>{openStores.length} Open</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <span>{stores.filter(s => s.timezone && s.operatingHours).length - openStores.length} Closed</span>
+              </div>
+              <div className="text-muted-foreground">
+                {new Date().toLocaleString('en-US', {
+                  weekday: 'short',
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  timeZoneName: 'short'
+                })}
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <WorldMap stores={stores} onStoreClick={setSelectedStore} />
+        </CardContent>
+      </Card>
+
+      {/* Open Stores Summary */}
+      {openStores.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Clock className="h-5 w-5 mr-2 text-green-600" />
+              Currently Open Stores ({openStores.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {openStores.map((store) => {
+                const getStoreLocalTime = (store: StoreType) => {
+                  if (!store.timezone) return 'Unknown';
+                  try {
+                    const now = new Date();
+                    return now.toLocaleString("en-US", {
+                      timeZone: store.timezone,
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true
+                    });
+                  } catch (error) {
+                    return 'Unknown';
+                  }
+                };
+
+                return (
+                  <Card 
+                    key={store.id} 
+                    className="cursor-pointer hover:shadow-md transition-shadow border-green-200"
+                    onClick={() => setSelectedStore(store)}
+                  >
+                    <CardContent className="pt-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium">{store.storeName}</h4>
+                          <p className="text-sm text-muted-foreground">{store.city}, {store.country}</p>
+                        </div>
+                        <div className="text-right">
+                          <div className="flex items-center text-green-600 text-sm font-medium">
+                            <div className="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></div>
+                            Open
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {getStoreLocalTime(store)}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-2 flex items-center justify-between text-xs">
+                        <Badge className={getBrandColor(store.brand)} variant="outline">
+                          {store.brand.toUpperCase()}
+                        </Badge>
+                        <span className="text-muted-foreground">{store.operatingHours}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs defaultValue="stores" className="space-y-6">
         <TabsList>
