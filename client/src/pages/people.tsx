@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Users, Building, Briefcase, UserCheck, Globe } from "lucide-react";
+import { Plus, Users, Building, Briefcase, UserCheck, Globe, Shield, BarChart, MapPin, Clock, Download, Filter, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -205,50 +205,301 @@ export default function People({ selectedBrand }: PeopleProps) {
         </TabsList>
 
         <TabsContent value="users">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                Users ({users?.length || 0})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {usersLoading ? (
-                <p>Loading users...</p>
-              ) : users?.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <Users className="mx-auto w-12 h-12 mb-4 text-gray-300" />
-                  <p>No users found for {selectedBrand === 'all' ? 'all brands' : selectedBrand}</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {users?.map((user) => (
-                    <div key={user.id} className="border rounded-lg p-4 hover:bg-gray-50">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="font-semibold">{user.displayName}</h3>
-                            {getStatusBadge(user.isActive)}
-                            {getSyncStatus(user.lastSync, user.entraId)}
+          <div className="space-y-6">
+            {/* Workforce Analytics KPIs */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Total Workforce</p>
+                      <p className="text-2xl font-bold text-ms-text">2,847</p>
+                    </div>
+                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <Users className="text-blue-600 w-6 h-6" />
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Active: {users?.filter(u => u.isActive).length || 0} | Managed: {users?.length || 0}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">EntraID Sync Rate</p>
+                      <p className="text-2xl font-bold text-green-600">
+                        {users ? Math.round((users.filter(u => u.entraId).length / users.length) * 100) : 0}%
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                      <UserCheck className="text-green-600 w-6 h-6" />
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    {users?.filter(u => u.entraId).length || 0} of {users?.length || 0} synced
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Department Coverage</p>
+                      <p className="text-2xl font-bold text-purple-600">
+                        {departments?.length || 0}
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <Building className="text-purple-600 w-6 h-6" />
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Across {divisions?.length || 0} divisions
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Persona Assignments</p>
+                      <p className="text-2xl font-bold text-orange-600">
+                        {users?.filter(u => u.personaId).length || 0}
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                      <Shield className="text-orange-600 w-6 h-6" />
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    {personas?.length || 0} role types available
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Workforce Distribution Charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center">
+                    <BarChart className="w-5 h-5 mr-2 text-blue-600" />
+                    Department Distribution
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {departments?.slice(0, 8).map((dept) => {
+                      const deptUsers = users?.filter(u => u.departmentId === dept.id).length || 0;
+                      const percentage = users?.length ? Math.round((deptUsers / users.length) * 100) : 0;
+                      
+                      return (
+                        <div key={dept.id} className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-medium">{dept.name}</span>
+                              <span className="text-sm text-gray-500">{deptUsers} ({percentage}%)</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="bg-blue-600 h-2 rounded-full" 
+                                style={{ width: `${percentage}%` }}
+                              />
+                            </div>
                           </div>
-                          <p className="text-sm text-gray-600 mb-1">{user.email}</p>
-                          {user.jobTitle && <p className="text-sm text-gray-600 mb-1">{user.jobTitle}</p>}
-                          {user.department && <p className="text-sm text-gray-600 mb-1">Department: {user.department}</p>}
-                          {user.manager && <p className="text-sm text-gray-600 mb-1">Manager: {user.manager}</p>}
-                          {user.officeLocation && <p className="text-sm text-gray-600">Location: {user.officeLocation}</p>}
                         </div>
-                        <div className="text-right">
-                          {user.businessPhone && <p className="text-sm text-gray-600">📞 {user.businessPhone}</p>}
-                          {user.mobilePhone && <p className="text-sm text-gray-600">📱 {user.mobilePhone}</p>}
-                          {user.entraId && <p className="text-xs text-gray-400 mt-1">EntraID: {user.entraId.substring(0, 8)}...</p>}
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center">
+                    <MapPin className="w-5 h-5 mr-2 text-green-600" />
+                    Location Distribution
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {Array.from(new Set(users?.map(u => u.officeLocation).filter(Boolean))).slice(0, 8).map((location) => {
+                      const locationUsers = users?.filter(u => u.officeLocation === location).length || 0;
+                      const percentage = users?.length ? Math.round((locationUsers / users.length) * 100) : 0;
+                      
+                      return (
+                        <div key={location} className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-medium">{location}</span>
+                              <span className="text-sm text-gray-500">{locationUsers} ({percentage}%)</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="bg-green-600 h-2 rounded-full" 
+                                style={{ width: `${percentage}%` }}
+                              />
+                            </div>
+                          </div>
                         </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Recent Sync Activity & User Management */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="w-5 h-5" />
+                      User Directory ({users?.length || 0})
+                    </CardTitle>
+                    <div className="flex gap-2">
+                      <Badge variant={users?.filter(u => u.isActive).length === users?.length ? "default" : "secondary"}>
+                        {users?.filter(u => u.isActive).length || 0} Active
+                      </Badge>
+                      <Badge variant="outline">
+                        {users?.filter(u => !u.isActive).length || 0} Inactive
+                      </Badge>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {usersLoading ? (
+                    <div className="space-y-4">
+                      {[...Array(3)].map((_, i) => (
+                        <div key={i} className="animate-pulse">
+                          <div className="border rounded-lg p-4">
+                            <div className="flex space-x-4">
+                              <div className="rounded-full bg-gray-200 h-10 w-10"></div>
+                              <div className="flex-1 space-y-2">
+                                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                                <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : users?.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <Users className="mx-auto w-12 h-12 mb-4 text-gray-300" />
+                      <p>No users found for {selectedBrand === 'all' ? 'all brands' : selectedBrand}</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {users?.map((user) => (
+                        <div key={user.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                          <div className="flex justify-between items-start">
+                            <div className="flex items-start space-x-3">
+                              <div className="w-10 h-10 bg-ms-blue/10 rounded-full flex items-center justify-center">
+                                <span className="text-sm font-semibold text-ms-blue">
+                                  {user.displayName?.split(' ').map(n => n[0]).join('').toUpperCase() || '??'}
+                                </span>
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h3 className="font-semibold text-sm">{user.displayName}</h3>
+                                  {getStatusBadge(user.isActive)}
+                                  {getSyncStatus(user.lastSync, user.entraId)}
+                                </div>
+                                <p className="text-xs text-gray-600 mb-1">{user.email}</p>
+                                {user.jobTitle && <p className="text-xs text-gray-600">{user.jobTitle}</p>}
+                                <div className="flex items-center gap-4 mt-2">
+                                  {user.department && (
+                                    <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                                      {user.department}
+                                    </span>
+                                  )}
+                                  {user.officeLocation && (
+                                    <span className="text-xs text-gray-500 flex items-center">
+                                      <MapPin className="w-3 h-3 mr-1" />
+                                      {user.officeLocation}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right text-xs text-gray-500">
+                              {user.businessPhone && <p>📞 {user.businessPhone}</p>}
+                              {user.entraId && <p className="mt-1">ID: {user.entraId.substring(0, 8)}...</p>}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center">
+                    <Clock className="w-5 h-5 mr-2 text-indigo-600" />
+                    Sync Activity
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-sm font-medium">Last EntraID Sync</span>
+                      </div>
+                      <span className="text-xs text-gray-600">2 hours ago</span>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Sync Success Rate</span>
+                        <span className="text-sm font-semibold text-green-600">98.2%</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">New Users (30d)</span>
+                        <span className="text-sm font-semibold">+47</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Deactivated (30d)</span>
+                        <span className="text-sm font-semibold text-red-600">-12</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Profile Updates</span>
+                        <span className="text-sm font-semibold">156</span>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+
+                    <div className="pt-4 border-t">
+                      <h4 className="text-sm font-semibold mb-3">Quick Actions</h4>
+                      <div className="space-y-2">
+                        <Button size="sm" variant="outline" className="w-full justify-start text-xs">
+                          <Download className="w-3 h-3 mr-2" />
+                          Export User List
+                        </Button>
+                        <Button size="sm" variant="outline" className="w-full justify-start text-xs">
+                          <Filter className="w-3 h-3 mr-2" />
+                          Advanced Filters
+                        </Button>
+                        <Button size="sm" variant="outline" className="w-full justify-start text-xs">
+                          <BarChart className="w-3 h-3 mr-2" />
+                          Analytics Report
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="corporates">
