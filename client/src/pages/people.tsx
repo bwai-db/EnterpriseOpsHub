@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { queryClient } from "@/lib/queryClient";
 import type { Brand } from "@/lib/types";
+import UserDetailModal from "@/components/user-detail-modal";
 
 interface User {
   id: number;
@@ -399,43 +400,45 @@ export default function People({ selectedBrand }: PeopleProps) {
                   ) : (
                     <div className="space-y-3 max-h-96 overflow-y-auto">
                       {users?.map((user) => (
-                        <div key={user.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                          <div className="flex justify-between items-start">
-                            <div className="flex items-start space-x-3">
-                              <div className="w-10 h-10 bg-ms-blue/10 rounded-full flex items-center justify-center">
-                                <span className="text-sm font-semibold text-ms-blue">
-                                  {user.displayName?.split(' ').map(n => n[0]).join('').toUpperCase() || '??'}
-                                </span>
-                              </div>
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <h3 className="font-semibold text-sm">{user.displayName}</h3>
-                                  {getStatusBadge(user.isActive)}
-                                  {getSyncStatus(user.lastSync, user.entraId)}
+                        <UserDetailModal key={user.id} userId={user.id} userName={user.displayName}>
+                          <div className="border rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer">
+                            <div className="flex justify-between items-start">
+                              <div className="flex items-start space-x-3">
+                                <div className="w-10 h-10 bg-ms-blue/10 rounded-full flex items-center justify-center">
+                                  <span className="text-sm font-semibold text-ms-blue">
+                                    {user.displayName?.split(' ').map(n => n[0]).join('').toUpperCase() || '??'}
+                                  </span>
                                 </div>
-                                <p className="text-xs text-gray-600 mb-1">{user.email}</p>
-                                {user.jobTitle && <p className="text-xs text-gray-600">{user.jobTitle}</p>}
-                                <div className="flex items-center gap-4 mt-2">
-                                  {user.department && (
-                                    <span className="text-xs bg-gray-100 px-2 py-1 rounded">
-                                      {user.department}
-                                    </span>
-                                  )}
-                                  {user.officeLocation && (
-                                    <span className="text-xs text-gray-500 flex items-center">
-                                      <MapPin className="w-3 h-3 mr-1" />
-                                      {user.officeLocation}
-                                    </span>
-                                  )}
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <h3 className="font-semibold text-sm">{user.displayName}</h3>
+                                    {getStatusBadge(user.isActive)}
+                                    {getSyncStatus(user.lastSync, user.entraId)}
+                                  </div>
+                                  <p className="text-xs text-gray-600 mb-1">{user.email}</p>
+                                  {user.jobTitle && <p className="text-xs text-gray-600">{user.jobTitle}</p>}
+                                  <div className="flex items-center gap-4 mt-2">
+                                    {user.department && (
+                                      <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                                        {user.department}
+                                      </span>
+                                    )}
+                                    {user.officeLocation && (
+                                      <span className="text-xs text-gray-500 flex items-center">
+                                        <MapPin className="w-3 h-3 mr-1" />
+                                        {user.officeLocation}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                            <div className="text-right text-xs text-gray-500">
-                              {user.businessPhone && <p>📞 {user.businessPhone}</p>}
-                              {user.entraId && <p className="mt-1">ID: {user.entraId.substring(0, 8)}...</p>}
+                              <div className="text-right text-xs text-gray-500">
+                                {user.businessPhone && <p>📞 {user.businessPhone}</p>}
+                                {user.entraId && <p className="mt-1">ID: {user.entraId.substring(0, 8)}...</p>}
+                              </div>
                             </div>
                           </div>
-                        </div>
+                        </UserDetailModal>
                       ))}
                     </div>
                   )}
