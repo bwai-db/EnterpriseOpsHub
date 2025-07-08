@@ -26,7 +26,7 @@ const navigationGroups = [
     name: "Overview",
     items: [
       { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-      { name: "Brand Onboarding", href: "/brand-onboarding", icon: Palette },
+      { name: "Brand Management Center", href: "/brand-onboarding", icon: Palette },
     ]
   },
   {
