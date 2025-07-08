@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRoute } from "wouter";
+import { useRoute, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -87,6 +87,7 @@ interface BrandKPIs {
 
 export default function BrandManagement() {
   const [match, params] = useRoute("/brand/:id/:mode?");
+  const [, setLocation] = useLocation();
   const brandId = params?.id ? parseInt(params.id) : null;
   const mode = params?.mode || "view";
   const [isEditing, setIsEditing] = useState(mode === "edit");
@@ -251,7 +252,7 @@ export default function BrandManagement() {
           <div className="flex items-center space-x-4">
             <Button
               variant="ghost"
-              onClick={() => window.history.back()}
+              onClick={() => setLocation("/brand-onboarding")}
               className="p-2"
             >
               <ArrowLeft className="w-4 h-4" />
