@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+
+name: enterprise-operations-platform
+metadata:
+  template: enterprise-operations-platform@0.0.1-beta
+
+workflows:
+  up:
+    steps:
+      - azd: provision
+      - azd: deploy
+
+services:
+  api:
+    project: ./
+    language: js
+    host: appservice
+    hooks:
+      prebuild:
+        shell: sh
+        run: |
+          echo "Installing dependencies..."
+          npm install
+      postdeploy:
+        shell: sh
+        run: |
+          echo "Running database migrations..."
+          npm run db:push
+
+hooks:
+  preprovision:
+    shell: sh
+    run: |
+      echo "Preparing Azure resources for Enterprise Operations Platform..."
+  postprovision:
+    shell: sh
+    run: |
+      echo "Azure infrastructure provisioned successfully"
+      echo "Setting up Entra ID application registration..."

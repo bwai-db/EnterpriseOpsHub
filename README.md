@@ -46,6 +46,38 @@ Before setting up the project, ensure you have:
 
 ## 🚀 Quick Start
 
+### Azure Deployment (Recommended)
+
+Deploy directly to Azure with enterprise-grade infrastructure:
+
+```bash
+# Install Azure Developer CLI
+curl -fsSL https://aka.ms/install-azd.sh | bash
+
+# Clone and setup
+git clone https://github.com/yourusername/enterprise-operations-platform.git
+cd enterprise-operations-platform
+
+# Prepare for Azure deployment
+./azd-scripts/prepare-deployment.sh
+
+# Deploy to Azure (takes 5-7 hours on first run due to SQL Managed Instance)
+azd up
+```
+
+**Azure Infrastructure Includes:**
+- **App Service Plan**: Intelligent auto-scaling (P1v3 tier)
+- **SQL Managed Instance**: Enterprise PostgreSQL with 4 vCores
+- **API Management**: Rate limiting, monitoring, API gateway
+- **Application Insights**: Comprehensive monitoring and analytics
+- **Key Vault**: Secure secret management
+- **Virtual Network**: Secure network isolation
+- **Entra ID SSO**: Single sign-on with app registration
+
+> 📖 **Detailed Azure guide**: See [deploy-azure.md](./deploy-azure.md) for comprehensive deployment instructions
+
+### Local Development
+
 ### 1. Clone the Repository
 
 ```bash

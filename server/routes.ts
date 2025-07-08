@@ -18,6 +18,38 @@ import {
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check endpoint for Azure App Service
+  app.get("/api/health", async (req, res) => {
+    try {
+      // Check database connectivity
+      const healthCheck = {
+        status: "healthy",
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || "development",
+        version: "1.0.0",
+        services: {
+          database: "connected",
+          api: "operational"
+        }
+      };
+      
+      // Test database connection
+      await storage.getCorporates();
+      
+      res.status(200).json(healthCheck);
+    } catch (error) {
+      res.status(503).json({
+        status: "unhealthy",
+        timestamp: new Date().toISOString(),
+        error: "Database connection failed",
+        services: {
+          database: "disconnected",
+          api: "operational"
+        }
+      });
+    }
+  });
+
   // Corporates
   app.get("/api/corporates", async (req, res) => {
     try {
