@@ -200,7 +200,14 @@ export default function BrandOnboarding() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createBrandMutation.mutate(formData);
+    // Convert numeric fields to proper types
+    const submitData = {
+      ...formData,
+      foundedYear: formData.foundedYear ? Number(formData.foundedYear) : undefined,
+      employeeCount: formData.employeeCount ? Number(formData.employeeCount) : undefined,
+      revenue: formData.revenue ? Number(formData.revenue) : undefined,
+    };
+    createBrandMutation.mutate(submitData);
   };
 
   const handleCompleteStep = (stepId: number) => {
@@ -227,9 +234,12 @@ export default function BrandOnboarding() {
               Onboard New Brand
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby="onboard-brand-description">
             <DialogHeader>
               <DialogTitle>Onboard New Brand</DialogTitle>
+              <p id="onboard-brand-description" className="text-sm text-gray-600">
+                Create a new brand and initialize its onboarding workflow for enterprise operations integration.
+              </p>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-2 gap-4">

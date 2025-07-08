@@ -2017,6 +2017,10 @@ export const insertBrandSchema = createInsertSchema(brands).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  revenue: z.coerce.number().optional(),
+  foundedYear: z.coerce.number().optional(),
+  employeeCount: z.coerce.number().optional(),
 });
 
 export const insertBrandOnboardingStepSchema = createInsertSchema(brandOnboardingSteps).omit({
