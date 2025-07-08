@@ -456,14 +456,16 @@ export default function Documentation({ brand }: DocumentationProps) {
                       <Button
                         key={category.id}
                         variant={selectedCategory === category.id ? "secondary" : "ghost"}
-                        className="w-full justify-start"
+                        className="w-full justify-start items-center"
                         onClick={() => setSelectedCategory(category.id)}
                       >
-                        <div 
-                          className="w-3 h-3 rounded-full mr-2" 
-                          style={{ backgroundColor: category.color }}
-                        />
-                        {category.name}
+                        <div className="flex items-center">
+                          <div 
+                            className="w-3 h-3 rounded-full mr-2 flex-shrink-0" 
+                            style={{ backgroundColor: category.color || '#6B7280' }}
+                          />
+                          <span>{category.name}</span>
+                        </div>
                       </Button>
                     ))}
                   </div>
