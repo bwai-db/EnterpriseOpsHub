@@ -254,12 +254,15 @@ resource logsContainer 'Microsoft.Storage/storageAccounts/blobServices/container
 
 // Outputs
 output keyVaultName string = keyVault.name
+output keyVaultUri string = keyVault.properties.vaultUri
 output keyVaultEndpoint string = keyVault.properties.vaultUri
 output appInsightsInstrumentationKey string = appInsights.properties.InstrumentationKey
 output appInsightsConnectionString string = appInsights.properties.ConnectionString
 output logAnalyticsWorkspaceId string = logAnalyticsWorkspace.id
+output virtualNetworkId string = vnet.id
 output vnetId string = vnet.id
 output appSubnetId string = '${vnet.id}/subnets/subnet-app'
 output sqlSubnetId string = '${vnet.id}/subnets/subnet-sql'
 output apimSubnetId string = '${vnet.id}/subnets/subnet-apim'
+output privateEndpointSubnetId string = '${vnet.id}/subnets/subnet-app'
 output storageAccountName string = storageAccount.name

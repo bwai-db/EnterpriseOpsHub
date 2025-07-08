@@ -9,6 +9,11 @@ param tenantId string
 param appClientId string
 param tags object = {}
 
+// Azure OpenAI parameters
+param azureOpenAIEndpoint string = ''
+param azureOpenAIKey string = ''
+param azureOpenAIModels object = {}
+
 // Intelligent App Service Plan with auto-scaling
 resource appServicePlan 'Microsoft.Web/serverfarms@2023-01-01' = {
   name: 'asp-${environmentName}-${resourceToken}'
@@ -224,6 +229,30 @@ resource appService 'Microsoft.Web/sites@2023-01-01' = {
         {
           name: 'OPENAI_API_KEY'
           value: openAiApiKey
+        }
+        {
+          name: 'AZURE_OPENAI_ENDPOINT'
+          value: azureOpenAIEndpoint
+        }
+        {
+          name: 'AZURE_OPENAI_KEY'
+          value: azureOpenAIKey
+        }
+        {
+          name: 'AZURE_OPENAI_GPT4O_DEPLOYMENT'
+          value: !empty(azureOpenAIModels) ? azureOpenAIModels.gpt4o : ''
+        }
+        {
+          name: 'AZURE_OPENAI_GPT35_DEPLOYMENT'
+          value: !empty(azureOpenAIModels) ? azureOpenAIModels.gpt35turbo : ''
+        }
+        {
+          name: 'AZURE_OPENAI_EMBEDDING_DEPLOYMENT'
+          value: !empty(azureOpenAIModels) ? azureOpenAIModels.embedding : ''
+        }
+        {
+          name: 'AZURE_OPENAI_DALLE_DEPLOYMENT'
+          value: !empty(azureOpenAIModels) && azureOpenAIModels.dalle != null ? azureOpenAIModels.dalle : ''
         }
         {
           name: 'AZURE_TENANT_ID'

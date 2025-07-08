@@ -14,6 +14,7 @@ This guide provides comprehensive instructions for deploying the Enterprise Oper
 - Active Azure subscription with contributor access
 - Permissions to create resource groups and resources
 - Permissions to create Entra ID app registrations (or admin assistance)
+- Access to Azure OpenAI Service (optional, for AI features)
 
 ## 🔧 Quick Start
 
@@ -100,6 +101,45 @@ After deployment, check the deployment output for:
 - SAML configuration URLs
 - Admin consent requirements
 
+## 🤖 Azure OpenAI Configuration
+
+The platform includes comprehensive Azure OpenAI integration for AI-powered documentation features.
+
+### Deployment Models
+**Development Environment:**
+- GPT-4o (10 tokens/minute) - Document improvements
+- GPT-3.5-turbo (20 tokens/minute) - Categorization
+- Text-embedding-ada-002 (30 tokens/minute) - Search
+
+**Production Environment:**
+- GPT-4o (50 tokens/minute) - Document improvements
+- GPT-3.5-turbo (100 tokens/minute) - Categorization
+- Text-embedding-ada-002 (120 tokens/minute) - Search
+- DALL-E 3 (2 tokens/minute) - Image generation
+
+### Network Security
+- **Development**: Public access enabled for ease of development
+- **Production**: Private endpoints with VNet integration
+- **Content Filtering**: Enterprise-grade content policies enabled
+- **Monitoring**: Full diagnostic logging and metrics collection
+
+### AI Features
+- **Document Improvements**: AI-powered content enhancement suggestions
+- **Smart Categorization**: Automatic document classification
+- **Semantic Search**: Embedding-based content discovery
+- **Content Summaries**: AI-generated document overviews
+
+### Environment Variables
+The deployment automatically configures:
+```
+AZURE_OPENAI_ENDPOINT=https://aoai-{env}-{token}.openai.azure.com/
+AZURE_OPENAI_KEY=[Retrieved from Key Vault]
+AZURE_OPENAI_GPT4O_DEPLOYMENT=gpt-4o
+AZURE_OPENAI_GPT35_DEPLOYMENT=gpt-35-turbo
+AZURE_OPENAI_EMBEDDING_DEPLOYMENT=text-embedding-ada-002
+AZURE_OPENAI_DALLE_DEPLOYMENT=dall-e-3 (prod only)
+```
+
 ## 📊 Monitoring and Management
 
 ### Application Insights
@@ -107,6 +147,7 @@ After deployment, check the deployment output for:
 - **Error Tracking**: Exceptions and failed requests
 - **User Analytics**: Session data and user flows
 - **Custom Metrics**: Business KPIs and operational data
+- **AI Usage Tracking**: OpenAI API call metrics and costs
 
 ### API Management Features
 - **Rate Limiting**: 1000 calls/minute, 10K calls/hour

@@ -98,6 +98,9 @@ module appService 'appservice/main.bicep' = {
     keyVaultName: coreInfra.outputs.keyVaultName
     appInsightsInstrumentationKey: coreInfra.outputs.appInsightsInstrumentationKey
     openAiApiKey: openAiApiKey
+    azureOpenAIEndpoint: azureOpenAI.outputs.openAIEndpoint
+    azureOpenAIKey: '@Microsoft.KeyVault(SecretUri=${coreInfra.outputs.keyVaultUri}secrets/AZURE-OPENAI-KEY/)'
+    azureOpenAIModels: azureOpenAI.outputs.deploymentNames
     tenantId: tenantId
     appClientId: appClientId
     tags: tags
@@ -105,6 +108,26 @@ module appService 'appservice/main.bicep' = {
   dependsOn: [
     coreInfra
     sqlmi
+    azureOpenAI
+  ]
+}
+
+// Deploy Azure OpenAI Service
+module azureOpenAI 'ai/aoai.bicep' = {
+  name: 'azure-openai'
+  scope: rg
+  params: {
+    environmentName: environmentName
+    location: location
+    resourceToken: resourceToken
+    principalId: principalId
+    keyVaultName: coreInfra.outputs.keyVaultName
+    virtualNetworkId: coreInfra.outputs.virtualNetworkId
+    privateEndpointSubnetId: coreInfra.outputs.privateEndpointSubnetId
+    tags: tags
+  }
+  dependsOn: [
+    coreInfra
   ]
 }
 
@@ -125,6 +148,13 @@ output AZURE_LOCATION string = location
 output AZURE_TENANT_ID string = tenantId
 output APPLICATIONINSIGHTS_CONNECTION_STRING string = coreInfra.outputs.appInsightsConnectionString
 output AZURE_KEY_VAULT_ENDPOINT string = coreInfra.outputs.keyVaultEndpoint
+output AZURE_OPENAI_ENDPOINT string = azureOpenAI.outputs.openAIEndpoint
+output AZURE_OPENAI_RESOURCE_NAME string = azureOpenAI.outputs.openAIName
+output AZURE_OPENAI_GPT4O_DEPLOYMENT string = azureOpenAI.outputs.deploymentNames.gpt4o
+output AZURE_OPENAI_GPT35_DEPLOYMENT string = azureOpenAI.outputs.deploymentNames.gpt35turbo
+output AZURE_OPENAI_EMBEDDING_DEPLOYMENT string = azureOpenAI.outputs.deploymentNames.embedding
+output AZURE_OPENAI_DALLE_DEPLOYMENT string = environmentName == 'prod' ? azureOpenAI.outputs.deploymentNames.dalle : ''
+output WEB_APP_URL string = appService.outputs.appServiceUrl
 output DATABASE_URL string = sqlmi.outputs.connectionString
 output API_BASE_URL string = appService.outputs.appServiceUrl
 output APIM_GATEWAY_URL string = apim.outputs.gatewayUrl
