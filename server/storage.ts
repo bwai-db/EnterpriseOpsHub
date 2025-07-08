@@ -11,6 +11,7 @@ import {
   facilities, facilityProjects, facilityImprovements, facilityRequests, facilityIncidents,
   corporateLicensePacks, entitlementLicenses, specializedLicenses, userLicenseAssignments, microsoftLicenseKpis,
   documentCategories, documents, documentRevisions, documentFeedback, aiDocumentImprovements, documentAnalytics,
+  brands, brandOnboardingSteps, brandIntegrations,
   type User, type InsertUser,
   type Vendor, type InsertVendor,
   type VendorTeamMember, type InsertVendorTeamMember,
@@ -72,7 +73,10 @@ import {
   type DocumentRevision, type InsertDocumentRevision,
   type DocumentFeedback, type InsertDocumentFeedback,
   type AiDocumentImprovement, type InsertAiDocumentImprovement,
-  type DocumentAnalytics, type InsertDocumentAnalytics
+  type DocumentAnalytics, type InsertDocumentAnalytics,
+  type Brand, type InsertBrand,
+  type BrandOnboardingStep, type InsertBrandOnboardingStep,
+  type BrandIntegration, type InsertBrandIntegration
 } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -404,6 +408,33 @@ export interface IStorage {
 
   trackDocumentAnalytics(analytics: InsertDocumentAnalytics): Promise<void>;
   getDocumentAnalytics(documentId: number, action?: string, timeframe?: number): Promise<DocumentAnalytics[]>;
+
+  // Brand Management
+  getBrands(isActive?: boolean): Promise<Brand[]>;
+  getBrand(id: number): Promise<Brand | undefined>;
+  getBrandByCode(code: string): Promise<Brand | undefined>;
+  createBrand(brand: InsertBrand): Promise<Brand>;
+  updateBrand(id: number, brand: Partial<InsertBrand>): Promise<Brand>;
+  deleteBrand(id: number): Promise<boolean>;
+  activateBrand(id: number): Promise<boolean>;
+  deactivateBrand(id: number): Promise<boolean>;
+
+  getBrandOnboardingSteps(brandId: number): Promise<BrandOnboardingStep[]>;
+  getBrandOnboardingStep(id: number): Promise<BrandOnboardingStep | undefined>;
+  createBrandOnboardingStep(step: InsertBrandOnboardingStep): Promise<BrandOnboardingStep>;
+  updateBrandOnboardingStep(id: number, step: Partial<InsertBrandOnboardingStep>): Promise<BrandOnboardingStep>;
+  deleteBrandOnboardingStep(id: number): Promise<boolean>;
+  completeBrandOnboardingStep(id: number, userId: number): Promise<boolean>;
+  initializeBrandOnboardingSteps(brandId: number): Promise<BrandOnboardingStep[]>;
+
+  getBrandIntegrations(brandId: number): Promise<BrandIntegration[]>;
+  getBrandIntegration(id: number): Promise<BrandIntegration | undefined>;
+  createBrandIntegration(integration: InsertBrandIntegration): Promise<BrandIntegration>;
+  updateBrandIntegration(id: number, integration: Partial<InsertBrandIntegration>): Promise<BrandIntegration>;
+  deleteBrandIntegration(id: number): Promise<boolean>;
+
+  onboardBrand(brand: InsertBrand): Promise<{ brand: Brand; onboardingSteps: BrandOnboardingStep[] }>;
+  getBrandOnboardingProgress(brandId: number): Promise<{ completedSteps: number; totalSteps: number; percentage: number }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3703,6 +3734,233 @@ export class DatabaseStorage implements IStorage {
     }
     
     return await db.execute(`SELECT * FROM document_analytics WHERE ${whereClause} ORDER BY created_at DESC`);
+  }
+
+  // Brand Management Implementation
+  async getBrands(isActive?: boolean): Promise<Brand[]> {
+    if (isActive !== undefined) {
+      return await db.select().from(brands).where(eq(brands.isActive, isActive));
+    }
+    return await db.select().from(brands);
+  }
+
+  async getBrand(id: number): Promise<Brand | undefined> {
+    const [brand] = await db.select().from(brands).where(eq(brands.id, id));
+    return brand || undefined;
+  }
+
+  async getBrandByCode(code: string): Promise<Brand | undefined> {
+    const [brand] = await db.select().from(brands).where(eq(brands.code, code));
+    return brand || undefined;
+  }
+
+  async createBrand(insertBrand: InsertBrand): Promise<Brand> {
+    const [brand] = await db
+      .insert(brands)
+      .values({
+        ...insertBrand,
+        updatedAt: new Date(),
+      })
+      .returning();
+    return brand;
+  }
+
+  async updateBrand(id: number, updateBrand: Partial<InsertBrand>): Promise<Brand> {
+    const [brand] = await db
+      .update(brands)
+      .set({
+        ...updateBrand,
+        updatedAt: new Date(),
+      })
+      .where(eq(brands.id, id))
+      .returning();
+    return brand;
+  }
+
+  async deleteBrand(id: number): Promise<boolean> {
+    const result = await db.delete(brands).where(eq(brands.id, id));
+    return result.rowCount > 0;
+  }
+
+  async activateBrand(id: number): Promise<boolean> {
+    const result = await db
+      .update(brands)
+      .set({ isActive: true, updatedAt: new Date() })
+      .where(eq(brands.id, id));
+    return result.rowCount > 0;
+  }
+
+  async deactivateBrand(id: number): Promise<boolean> {
+    const result = await db
+      .update(brands)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(brands.id, id));
+    return result.rowCount > 0;
+  }
+
+  async getBrandOnboardingSteps(brandId: number): Promise<BrandOnboardingStep[]> {
+    return await db.select().from(brandOnboardingSteps)
+      .where(eq(brandOnboardingSteps.brandId, brandId))
+      .orderBy(brandOnboardingSteps.sortOrder);
+  }
+
+  async getBrandOnboardingStep(id: number): Promise<BrandOnboardingStep | undefined> {
+    const [step] = await db.select().from(brandOnboardingSteps).where(eq(brandOnboardingSteps.id, id));
+    return step || undefined;
+  }
+
+  async createBrandOnboardingStep(insertStep: InsertBrandOnboardingStep): Promise<BrandOnboardingStep> {
+    const [step] = await db
+      .insert(brandOnboardingSteps)
+      .values(insertStep)
+      .returning();
+    return step;
+  }
+
+  async updateBrandOnboardingStep(id: number, updateStep: Partial<InsertBrandOnboardingStep>): Promise<BrandOnboardingStep> {
+    const [step] = await db
+      .update(brandOnboardingSteps)
+      .set(updateStep)
+      .where(eq(brandOnboardingSteps.id, id))
+      .returning();
+    return step;
+  }
+
+  async deleteBrandOnboardingStep(id: number): Promise<boolean> {
+    const result = await db.delete(brandOnboardingSteps).where(eq(brandOnboardingSteps.id, id));
+    return result.rowCount > 0;
+  }
+
+  async completeBrandOnboardingStep(id: number, userId: number): Promise<boolean> {
+    const result = await db
+      .update(brandOnboardingSteps)
+      .set({
+        isCompleted: true,
+        completedAt: new Date(),
+        completedBy: userId,
+      })
+      .where(eq(brandOnboardingSteps.id, id));
+    return result.rowCount > 0;
+  }
+
+  async initializeBrandOnboardingSteps(brandId: number): Promise<BrandOnboardingStep[]> {
+    const defaultSteps = [
+      {
+        brandId,
+        stepName: "Corporate Structure Setup",
+        stepDescription: "Create corporate entities, divisions, and departments",
+        sortOrder: 1,
+      },
+      {
+        brandId,
+        stepName: "User Management Integration",
+        stepDescription: "Set up EntraID integration and user synchronization",
+        sortOrder: 2,
+      },
+      {
+        brandId,
+        stepName: "Vendor & License Setup",
+        stepDescription: "Configure vendor relationships and license management",
+        sortOrder: 3,
+      },
+      {
+        brandId,
+        stepName: "Service Management Configuration",
+        stepDescription: "Set up ITIL services and configuration items",
+        sortOrder: 4,
+      },
+      {
+        brandId,
+        stepName: "Retail Operations Setup",
+        stepDescription: "Configure stores, inventory, and staff management",
+        sortOrder: 5,
+      },
+      {
+        brandId,
+        stepName: "Supply Chain Integration",
+        stepDescription: "Set up manufacturers, products, and supply chain tracking",
+        sortOrder: 6,
+      },
+      {
+        brandId,
+        stepName: "Integration & API Setup",
+        stepDescription: "Configure external integrations and API connections",
+        sortOrder: 7,
+      },
+      {
+        brandId,
+        stepName: "Documentation & Training",
+        stepDescription: "Create brand-specific documentation and training materials",
+        sortOrder: 8,
+      },
+    ];
+
+    const createdSteps = [];
+    for (const step of defaultSteps) {
+      const [createdStep] = await db
+        .insert(brandOnboardingSteps)
+        .values(step)
+        .returning();
+      createdSteps.push(createdStep);
+    }
+
+    return createdSteps;
+  }
+
+  async getBrandIntegrations(brandId: number): Promise<BrandIntegration[]> {
+    return await db.select().from(brandIntegrations).where(eq(brandIntegrations.brandId, brandId));
+  }
+
+  async getBrandIntegration(id: number): Promise<BrandIntegration | undefined> {
+    const [integration] = await db.select().from(brandIntegrations).where(eq(brandIntegrations.id, id));
+    return integration || undefined;
+  }
+
+  async createBrandIntegration(insertIntegration: InsertBrandIntegration): Promise<BrandIntegration> {
+    const [integration] = await db
+      .insert(brandIntegrations)
+      .values({
+        ...insertIntegration,
+        updatedAt: new Date(),
+      })
+      .returning();
+    return integration;
+  }
+
+  async updateBrandIntegration(id: number, updateIntegration: Partial<InsertBrandIntegration>): Promise<BrandIntegration> {
+    const [integration] = await db
+      .update(brandIntegrations)
+      .set({
+        ...updateIntegration,
+        updatedAt: new Date(),
+      })
+      .where(eq(brandIntegrations.id, id))
+      .returning();
+    return integration;
+  }
+
+  async deleteBrandIntegration(id: number): Promise<boolean> {
+    const result = await db.delete(brandIntegrations).where(eq(brandIntegrations.id, id));
+    return result.rowCount > 0;
+  }
+
+  async onboardBrand(insertBrand: InsertBrand): Promise<{ brand: Brand; onboardingSteps: BrandOnboardingStep[] }> {
+    // Create the brand
+    const brand = await this.createBrand(insertBrand);
+    
+    // Initialize onboarding steps
+    const onboardingSteps = await this.initializeBrandOnboardingSteps(brand.id);
+    
+    return { brand, onboardingSteps };
+  }
+
+  async getBrandOnboardingProgress(brandId: number): Promise<{ completedSteps: number; totalSteps: number; percentage: number }> {
+    const steps = await this.getBrandOnboardingSteps(brandId);
+    const completedSteps = steps.filter(step => step.isCompleted).length;
+    const totalSteps = steps.length;
+    const percentage = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
+    
+    return { completedSteps, totalSteps, percentage };
   }
 }
 

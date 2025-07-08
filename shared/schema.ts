@@ -3,6 +3,51 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Brand Management Tables
+export const brands = pgTable("brands", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  code: text("code").notNull().unique(), // Short code like 'blorcs', 'shaypops'
+  displayName: text("display_name").notNull(),
+  description: text("description"),
+  logoUrl: text("logo_url"),
+  primaryColor: text("primary_color").default("#3B82F6"),
+  secondaryColor: text("secondary_color").default("#64748B"),
+  website: text("website"),
+  industry: text("industry"),
+  headquarters: text("headquarters"),
+  foundedYear: integer("founded_year"),
+  employeeCount: integer("employee_count"),
+  revenue: decimal("revenue", { precision: 15, scale: 2 }),
+  isActive: boolean("is_active").default(true),
+  onboardingCompleted: boolean("onboarding_completed").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const brandOnboardingSteps = pgTable("brand_onboarding_steps", {
+  id: serial("id").primaryKey(),
+  brandId: integer("brand_id").references(() => brands.id),
+  stepName: text("step_name").notNull(),
+  stepDescription: text("step_description"),
+  isCompleted: boolean("is_completed").default(false),
+  completedAt: timestamp("completed_at"),
+  completedBy: integer("completed_by").references(() => users.id),
+  sortOrder: integer("sort_order").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const brandIntegrations = pgTable("brand_integrations", {
+  id: serial("id").primaryKey(),
+  brandId: integer("brand_id").references(() => brands.id),
+  integrationType: text("integration_type").notNull(), // 'azure_ad', 'microsoft_365', 'servicenow', etc.
+  configurationData: jsonb("configuration_data"), // Store integration-specific config
+  isActive: boolean("is_active").default(true),
+  lastSyncAt: timestamp("last_sync_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Organizational Structure Tables
 export const corporates = pgTable("corporates", {
   id: serial("id").primaryKey(),
@@ -1941,3 +1986,56 @@ export type AiDocumentImprovement = typeof aiDocumentImprovements.$inferSelect;
 
 export type InsertDocumentAnalytics = z.infer<typeof insertDocumentAnalyticsSchema>;
 export type DocumentAnalytics = typeof documentAnalytics.$inferSelect;
+
+// Brand Management Relations
+export const brandsRelations = relations(brands, ({ many }) => ({
+  onboardingSteps: many(brandOnboardingSteps),
+  integrations: many(brandIntegrations),
+  corporates: many(corporates),
+}));
+
+export const brandOnboardingStepsRelations = relations(brandOnboardingSteps, ({ one }) => ({
+  brand: one(brands, {
+    fields: [brandOnboardingSteps.brandId],
+    references: [brands.id],
+  }),
+  completedByUser: one(users, {
+    fields: [brandOnboardingSteps.completedBy],
+    references: [users.id],
+  }),
+}));
+
+export const brandIntegrationsRelations = relations(brandIntegrations, ({ one }) => ({
+  brand: one(brands, {
+    fields: [brandIntegrations.brandId],
+    references: [brands.id],
+  }),
+}));
+
+// Brand Management Schemas
+export const insertBrandSchema = createInsertSchema(brands).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBrandOnboardingStepSchema = createInsertSchema(brandOnboardingSteps).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertBrandIntegrationSchema = createInsertSchema(brandIntegrations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Brand Management Types
+export type InsertBrand = z.infer<typeof insertBrandSchema>;
+export type Brand = typeof brands.$inferSelect;
+
+export type InsertBrandOnboardingStep = z.infer<typeof insertBrandOnboardingStepSchema>;
+export type BrandOnboardingStep = typeof brandOnboardingSteps.$inferSelect;
+
+export type InsertBrandIntegration = z.infer<typeof insertBrandIntegrationSchema>;
+export type BrandIntegration = typeof brandIntegrations.$inferSelect;

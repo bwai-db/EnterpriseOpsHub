@@ -15,7 +15,8 @@ import {
   insertCorporateLicensePackSchema, insertEntitlementLicenseSchema, insertSpecializedLicenseSchema,
   insertUserLicenseAssignmentSchema, insertMicrosoftLicenseKpisSchema,
   insertDocumentCategorySchema, insertDocumentSchema, insertDocumentRevisionSchema,
-  insertDocumentFeedbackSchema, insertAiDocumentImprovementSchema, insertDocumentAnalyticsSchema
+  insertDocumentFeedbackSchema, insertAiDocumentImprovementSchema, insertDocumentAnalyticsSchema,
+  insertBrandSchema, insertBrandOnboardingStepSchema, insertBrandIntegrationSchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -2487,6 +2488,228 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error tracking analytics:", error);
       res.status(500).json({ error: "Failed to track analytics" });
+    }
+  });
+
+  // Brand Management Routes
+  app.get("/api/brands", async (req, res) => {
+    try {
+      const { isActive } = req.query;
+      const brands = await storage.getBrands(isActive === "true" ? true : isActive === "false" ? false : undefined);
+      res.json(brands);
+    } catch (error) {
+      console.error("Error fetching brands:", error);
+      res.status(500).json({ error: "Failed to fetch brands" });
+    }
+  });
+
+  app.get("/api/brands/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const brand = await storage.getBrand(id);
+      if (!brand) {
+        return res.status(404).json({ error: "Brand not found" });
+      }
+      res.json(brand);
+    } catch (error) {
+      console.error("Error fetching brand:", error);
+      res.status(500).json({ error: "Failed to fetch brand" });
+    }
+  });
+
+  app.get("/api/brands/code/:code", async (req, res) => {
+    try {
+      const { code } = req.params;
+      const brand = await storage.getBrandByCode(code);
+      if (!brand) {
+        return res.status(404).json({ error: "Brand not found" });
+      }
+      res.json(brand);
+    } catch (error) {
+      console.error("Error fetching brand by code:", error);
+      res.status(500).json({ error: "Failed to fetch brand" });
+    }
+  });
+
+  app.post("/api/brands", async (req, res) => {
+    try {
+      const validatedData = insertBrandSchema.parse(req.body);
+      const brand = await storage.createBrand(validatedData);
+      res.status(201).json(brand);
+    } catch (error) {
+      console.error("Error creating brand:", error);
+      res.status(500).json({ error: "Failed to create brand" });
+    }
+  });
+
+  app.post("/api/brands/onboard", async (req, res) => {
+    try {
+      const validatedData = insertBrandSchema.parse(req.body);
+      const result = await storage.onboardBrand(validatedData);
+      res.status(201).json(result);
+    } catch (error) {
+      console.error("Error onboarding brand:", error);
+      res.status(500).json({ error: "Failed to onboard brand" });
+    }
+  });
+
+  app.patch("/api/brands/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertBrandSchema.partial().parse(req.body);
+      const brand = await storage.updateBrand(id, validatedData);
+      res.json(brand);
+    } catch (error) {
+      console.error("Error updating brand:", error);
+      res.status(500).json({ error: "Failed to update brand" });
+    }
+  });
+
+  app.delete("/api/brands/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteBrand(id);
+      if (!success) {
+        return res.status(404).json({ error: "Brand not found" });
+      }
+      res.json({ message: "Brand deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting brand:", error);
+      res.status(500).json({ error: "Failed to delete brand" });
+    }
+  });
+
+  app.patch("/api/brands/:id/activate", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.activateBrand(id);
+      if (!success) {
+        return res.status(404).json({ error: "Brand not found" });
+      }
+      res.json({ message: "Brand activated successfully" });
+    } catch (error) {
+      console.error("Error activating brand:", error);
+      res.status(500).json({ error: "Failed to activate brand" });
+    }
+  });
+
+  app.patch("/api/brands/:id/deactivate", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deactivateBrand(id);
+      if (!success) {
+        return res.status(404).json({ error: "Brand not found" });
+      }
+      res.json({ message: "Brand deactivated successfully" });
+    } catch (error) {
+      console.error("Error deactivating brand:", error);
+      res.status(500).json({ error: "Failed to deactivate brand" });
+    }
+  });
+
+  // Brand Onboarding Steps Routes
+  app.get("/api/brands/:brandId/onboarding-steps", async (req, res) => {
+    try {
+      const brandId = parseInt(req.params.brandId);
+      const steps = await storage.getBrandOnboardingSteps(brandId);
+      res.json(steps);
+    } catch (error) {
+      console.error("Error fetching onboarding steps:", error);
+      res.status(500).json({ error: "Failed to fetch onboarding steps" });
+    }
+  });
+
+  app.get("/api/brands/:brandId/onboarding-progress", async (req, res) => {
+    try {
+      const brandId = parseInt(req.params.brandId);
+      const progress = await storage.getBrandOnboardingProgress(brandId);
+      res.json(progress);
+    } catch (error) {
+      console.error("Error fetching onboarding progress:", error);
+      res.status(500).json({ error: "Failed to fetch onboarding progress" });
+    }
+  });
+
+  app.patch("/api/onboarding-steps/:id/complete", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { userId } = req.body;
+      const success = await storage.completeBrandOnboardingStep(id, userId);
+      if (!success) {
+        return res.status(404).json({ error: "Onboarding step not found" });
+      }
+      res.json({ message: "Onboarding step completed successfully" });
+    } catch (error) {
+      console.error("Error completing onboarding step:", error);
+      res.status(500).json({ error: "Failed to complete onboarding step" });
+    }
+  });
+
+  app.post("/api/brands/:brandId/onboarding-steps", async (req, res) => {
+    try {
+      const brandId = parseInt(req.params.brandId);
+      const validatedData = insertBrandOnboardingStepSchema.parse({
+        ...req.body,
+        brandId,
+      });
+      const step = await storage.createBrandOnboardingStep(validatedData);
+      res.status(201).json(step);
+    } catch (error) {
+      console.error("Error creating onboarding step:", error);
+      res.status(500).json({ error: "Failed to create onboarding step" });
+    }
+  });
+
+  // Brand Integrations Routes
+  app.get("/api/brands/:brandId/integrations", async (req, res) => {
+    try {
+      const brandId = parseInt(req.params.brandId);
+      const integrations = await storage.getBrandIntegrations(brandId);
+      res.json(integrations);
+    } catch (error) {
+      console.error("Error fetching brand integrations:", error);
+      res.status(500).json({ error: "Failed to fetch brand integrations" });
+    }
+  });
+
+  app.post("/api/brands/:brandId/integrations", async (req, res) => {
+    try {
+      const brandId = parseInt(req.params.brandId);
+      const validatedData = insertBrandIntegrationSchema.parse({
+        ...req.body,
+        brandId,
+      });
+      const integration = await storage.createBrandIntegration(validatedData);
+      res.status(201).json(integration);
+    } catch (error) {
+      console.error("Error creating brand integration:", error);
+      res.status(500).json({ error: "Failed to create brand integration" });
+    }
+  });
+
+  app.patch("/api/brand-integrations/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertBrandIntegrationSchema.partial().parse(req.body);
+      const integration = await storage.updateBrandIntegration(id, validatedData);
+      res.json(integration);
+    } catch (error) {
+      console.error("Error updating brand integration:", error);
+      res.status(500).json({ error: "Failed to update brand integration" });
+    }
+  });
+
+  app.delete("/api/brand-integrations/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteBrandIntegration(id);
+      if (!success) {
+        return res.status(404).json({ error: "Brand integration not found" });
+      }
+      res.json({ message: "Brand integration deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting brand integration:", error);
+      res.status(500).json({ error: "Failed to delete brand integration" });
     }
   });
 

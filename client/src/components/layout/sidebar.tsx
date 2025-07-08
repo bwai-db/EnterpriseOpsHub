@@ -17,7 +17,8 @@ import {
   Code,
   Package,
   MapPin,
-  BookOpen
+  BookOpen,
+  Palette
 } from "lucide-react";
 
 const navigationGroups = [
@@ -25,6 +26,7 @@ const navigationGroups = [
     name: "Overview",
     items: [
       { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { name: "Brand Onboarding", href: "/brand-onboarding", icon: Palette },
     ]
   },
   {
