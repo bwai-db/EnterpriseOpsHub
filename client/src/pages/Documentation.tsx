@@ -68,37 +68,50 @@ export default function Documentation({ brand }: DocumentationProps) {
   // Fetch data
   const { data: categories = [], isLoading: categoriesLoading } = useQuery({
     queryKey: ["/api/documentation/categories"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/documentation/categories");
+      return response.json();
+    },
   });
 
   const { data: documents = [], isLoading: documentsLoading } = useQuery({
     queryKey: ["/api/documentation/documents", selectedCategory],
-    queryFn: () => apiRequest(`/api/documentation/documents?categoryId=${selectedCategory || ""}`),
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/documentation/documents?categoryId=${selectedCategory || ""}`);
+      return response.json();
+    },
   });
 
   const { data: featuredDocs = [] } = useQuery({
     queryKey: ["/api/documentation/documents", "featured"],
-    queryFn: () => apiRequest("/api/documentation/documents?featured=true"),
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/documentation/documents?featured=true");
+      return response.json();
+    },
   });
 
   const { data: aiImprovements = [] } = useQuery({
     queryKey: ["/api/documentation/ai-improvements"],
-    queryFn: () => apiRequest("/api/documentation/documents/1/ai-improvements"),
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/documentation/documents/1/ai-improvements");
+      return response.json();
+    },
     enabled: !!selectedDocument,
   });
 
   // Search documents
   const { data: searchResults = [] } = useQuery({
     queryKey: ["/api/documentation/search", searchQuery, selectedCategory],
-    queryFn: () => apiRequest(`/api/documentation/documents/search?q=${searchQuery}&categoryId=${selectedCategory || ""}`),
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/documentation/documents/search?q=${searchQuery}&categoryId=${selectedCategory || ""}`);
+      return response.json();
+    },
     enabled: searchQuery.length > 2,
   });
 
   // Mutations
   const createCategoryMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("/api/documentation/categories", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
+    mutationFn: (data: any) => apiRequest("POST", "/api/documentation/categories", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/documentation/categories"] });
       setShowCreateCategory(false);
@@ -106,10 +119,7 @@ export default function Documentation({ brand }: DocumentationProps) {
   });
 
   const createDocumentMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("/api/documentation/documents", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
+    mutationFn: (data: any) => apiRequest("POST", "/api/documentation/documents", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/documentation/documents"] });
       setShowCreateDocument(false);
@@ -118,10 +128,7 @@ export default function Documentation({ brand }: DocumentationProps) {
 
   const createFeedbackMutation = useMutation({
     mutationFn: ({ documentId, feedback }: { documentId: number; feedback: any }) =>
-      apiRequest(`/api/documentation/documents/${documentId}/feedback`, {
-        method: "POST",
-        body: JSON.stringify(feedback),
-      }),
+      apiRequest("POST", `/api/documentation/documents/${documentId}/feedback`, feedback),
     onSuccess: () => {
       setShowFeedbackDialog(false);
     },
@@ -129,10 +136,7 @@ export default function Documentation({ brand }: DocumentationProps) {
 
   const generateAiImprovementMutation = useMutation({
     mutationFn: ({ documentId, improvementType }: { documentId: number; improvementType: string }) =>
-      apiRequest(`/api/documentation/documents/${documentId}/ai-improvements`, {
-        method: "POST",
-        body: JSON.stringify({ userId: 1, improvementType }),
-      }),
+      apiRequest("POST", `/api/documentation/documents/${documentId}/ai-improvements`, { userId: 1, improvementType }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/documentation/ai-improvements"] });
     },
