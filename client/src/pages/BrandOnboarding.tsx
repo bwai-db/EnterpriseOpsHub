@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +25,7 @@ import {
   Users, 
   ShoppingCart, 
   Factory, 
-  Link,
+  Link as LinkIcon,
   FileText,
   Rocket,
   Palette,
@@ -77,7 +78,7 @@ const stepIcons = {
   "Service Management Configuration": Settings,
   "Retail Operations Setup": ShoppingCart,
   "Supply Chain Integration": Factory,
-  "Integration & API Setup": Link,
+  "Integration & API Setup": LinkIcon,
   "Documentation & Training": FileText,
 };
 
@@ -455,16 +456,15 @@ export default function BrandOnboarding() {
                       <Badge variant={brand.onboardingCompleted ? "default" : "destructive"}>
                         {brand.onboardingCompleted ? "Onboarded" : "Pending"}
                       </Badge>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedBrand(brand);
-                        }}
-                      >
-                        Manage
-                      </Button>
+                      <Link href={`/brand/${brand.id}/view`}>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Manage
+                        </Button>
+                      </Link>
                     </div>
                   </div>
                 </CardContent>

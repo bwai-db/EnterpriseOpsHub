@@ -24,6 +24,7 @@ import ShipmentTracking from "@/pages/shipment-tracking";
 import FacilitiesManagement from "@/pages/facilities-management";
 import Documentation from "@/pages/Documentation";
 import BrandOnboarding from "@/pages/BrandOnboarding";
+import BrandManagement from "@/pages/BrandManagement";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import type { Brand } from "@/lib/types";
@@ -51,6 +52,7 @@ function Router({ selectedBrand }: { selectedBrand: Brand }) {
       <Route path="/facilities-management" component={() => <FacilitiesManagement selectedBrand={selectedBrand} />} />
       <Route path="/documentation" component={() => <Documentation brand={selectedBrand} />} />
       <Route path="/brand-onboarding" component={() => <BrandOnboarding />} />
+      <Route path="/brand/:id/:mode?" component={() => <BrandManagement />} />
       <Route component={NotFound} />
     </Switch>
   );
