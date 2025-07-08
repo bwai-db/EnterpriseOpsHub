@@ -16,7 +16,8 @@ import {
   Database,
   Code,
   Package,
-  MapPin
+  MapPin,
+  BookOpen
 } from "lucide-react";
 
 const navigationGroups = [
@@ -36,6 +37,7 @@ const navigationGroups = [
       { name: "ITIL Management", href: "/itil", icon: Ticket },
       { name: "Service Management", href: "/service-management", icon: Database },
       { name: "Integration Center", href: "/integration-center", icon: Code },
+      { name: "Documentation", href: "/documentation", icon: BookOpen },
       { name: "Security & Compliance", href: "/security", icon: Shield },
     ]
   },

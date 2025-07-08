@@ -13,7 +13,9 @@ import {
   insertManufacturingMetricsSchema, insertSupplierSchema, insertSupplyChainKpisSchema,
   insertFacilitySchema, insertFacilityProjectSchema, insertFacilityImprovementSchema, insertFacilityRequestSchema, insertFacilityIncidentSchema,
   insertCorporateLicensePackSchema, insertEntitlementLicenseSchema, insertSpecializedLicenseSchema,
-  insertUserLicenseAssignmentSchema, insertMicrosoftLicenseKpisSchema
+  insertUserLicenseAssignmentSchema, insertMicrosoftLicenseKpisSchema,
+  insertDocumentCategorySchema, insertDocumentSchema, insertDocumentRevisionSchema,
+  insertDocumentFeedbackSchema, insertAiDocumentImprovementSchema, insertDocumentAnalyticsSchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -2285,6 +2287,206 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error redistributing licenses:", error);
       res.status(500).json({ error: "Failed to redistribute licenses" });
+    }
+  });
+
+  // Documentation and Knowledge Base Routes
+  app.get("/api/documentation/categories", async (req, res) => {
+    try {
+      const parentId = req.query.parentId ? parseInt(req.query.parentId as string) : undefined;
+      const categories = await storage.getDocumentCategories(parentId);
+      res.json(categories);
+    } catch (error) {
+      console.error("Error fetching document categories:", error);
+      res.status(500).json({ error: "Failed to fetch document categories" });
+    }
+  });
+
+  app.post("/api/documentation/categories", async (req, res) => {
+    try {
+      const validatedData = insertDocumentCategorySchema.parse(req.body);
+      const category = await storage.createDocumentCategory(validatedData);
+      res.json(category);
+    } catch (error) {
+      console.error("Error creating document category:", error);
+      res.status(500).json({ error: "Failed to create document category" });
+    }
+  });
+
+  app.get("/api/documentation/documents", async (req, res) => {
+    try {
+      const categoryId = req.query.categoryId ? parseInt(req.query.categoryId as string) : undefined;
+      const status = req.query.status as string;
+      const featured = req.query.featured === 'true';
+      const documents = await storage.getDocuments(categoryId, status, featured);
+      res.json(documents);
+    } catch (error) {
+      console.error("Error fetching documents:", error);
+      res.status(500).json({ error: "Failed to fetch documents" });
+    }
+  });
+
+  app.get("/api/documentation/documents/search", async (req, res) => {
+    try {
+      const query = req.query.q as string;
+      const categoryId = req.query.categoryId ? parseInt(req.query.categoryId as string) : undefined;
+      
+      if (!query) {
+        return res.status(400).json({ error: "Search query is required" });
+      }
+      
+      const documents = await storage.searchDocuments(query, categoryId);
+      res.json(documents);
+    } catch (error) {
+      console.error("Error searching documents:", error);
+      res.status(500).json({ error: "Failed to search documents" });
+    }
+  });
+
+  app.get("/api/documentation/documents/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const document = await storage.getDocument(id);
+      
+      if (!document) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+      
+      // Increment view count
+      await storage.incrementDocumentView(id);
+      
+      res.json(document);
+    } catch (error) {
+      console.error("Error fetching document:", error);
+      res.status(500).json({ error: "Failed to fetch document" });
+    }
+  });
+
+  app.post("/api/documentation/documents", async (req, res) => {
+    try {
+      const validatedData = insertDocumentSchema.parse(req.body);
+      const document = await storage.createDocument(validatedData);
+      res.json(document);
+    } catch (error) {
+      console.error("Error creating document:", error);
+      res.status(500).json({ error: "Failed to create document" });
+    }
+  });
+
+  app.patch("/api/documentation/documents/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertDocumentSchema.partial().parse(req.body);
+      const document = await storage.updateDocument(id, validatedData);
+      res.json(document);
+    } catch (error) {
+      console.error("Error updating document:", error);
+      res.status(500).json({ error: "Failed to update document" });
+    }
+  });
+
+  app.delete("/api/documentation/documents/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteDocument(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting document:", error);
+      res.status(500).json({ error: "Failed to delete document" });
+    }
+  });
+
+  app.post("/api/documentation/documents/:id/feedback", async (req, res) => {
+    try {
+      const documentId = parseInt(req.params.id);
+      const validatedData = insertDocumentFeedbackSchema.parse({
+        ...req.body,
+        documentId
+      });
+      const feedback = await storage.createDocumentFeedback(validatedData);
+      res.json(feedback);
+    } catch (error) {
+      console.error("Error creating document feedback:", error);
+      res.status(500).json({ error: "Failed to create document feedback" });
+    }
+  });
+
+  app.get("/api/documentation/documents/:id/ai-improvements", async (req, res) => {
+    try {
+      const documentId = parseInt(req.params.id);
+      const status = req.query.status as string;
+      const improvements = await storage.getAiDocumentImprovements(documentId, status);
+      res.json(improvements);
+    } catch (error) {
+      console.error("Error fetching AI improvements:", error);
+      res.status(500).json({ error: "Failed to fetch AI improvements" });
+    }
+  });
+
+  app.post("/api/documentation/documents/:id/ai-improvements", async (req, res) => {
+    try {
+      const documentId = parseInt(req.params.id);
+      const { userId, improvementType } = req.body;
+      
+      if (!userId || !improvementType) {
+        return res.status(400).json({ error: "userId and improvementType are required" });
+      }
+      
+      const improvement = await storage.generateAiImprovement(documentId, userId, improvementType);
+      res.json(improvement);
+    } catch (error) {
+      console.error("Error generating AI improvement:", error);
+      res.status(500).json({ error: "Failed to generate AI improvement" });
+    }
+  });
+
+  app.patch("/api/documentation/ai-improvements/:id/approve", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { reviewerId, notes } = req.body;
+      
+      if (!reviewerId) {
+        return res.status(400).json({ error: "reviewerId is required" });
+      }
+      
+      const success = await storage.approveAiImprovement(id, reviewerId, notes);
+      res.json({ success });
+    } catch (error) {
+      console.error("Error approving AI improvement:", error);
+      res.status(500).json({ error: "Failed to approve AI improvement" });
+    }
+  });
+
+  app.patch("/api/documentation/ai-improvements/:id/reject", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { reviewerId, notes } = req.body;
+      
+      if (!reviewerId) {
+        return res.status(400).json({ error: "reviewerId is required" });
+      }
+      
+      const success = await storage.rejectAiImprovement(id, reviewerId, notes);
+      res.json({ success });
+    } catch (error) {
+      console.error("Error rejecting AI improvement:", error);
+      res.status(500).json({ error: "Failed to reject AI improvement" });
+    }
+  });
+
+  app.post("/api/documentation/analytics", async (req, res) => {
+    try {
+      const validatedData = insertDocumentAnalyticsSchema.parse(req.body);
+      await storage.trackDocumentAnalytics(validatedData);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error tracking analytics:", error);
+      res.status(500).json({ error: "Failed to track analytics" });
     }
   });
 

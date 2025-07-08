@@ -10,6 +10,7 @@ import {
   shipments, shipmentStages, shipmentEvents, shippingCarriers, shipmentRoutes, shipmentDocuments, shipmentAlerts,
   facilities, facilityProjects, facilityImprovements, facilityRequests, facilityIncidents,
   corporateLicensePacks, entitlementLicenses, specializedLicenses, userLicenseAssignments, microsoftLicenseKpis,
+  documentCategories, documents, documentRevisions, documentFeedback, aiDocumentImprovements, documentAnalytics,
   type User, type InsertUser,
   type Vendor, type InsertVendor,
   type VendorTeamMember, type InsertVendorTeamMember,
@@ -65,7 +66,13 @@ import {
   type EntitlementLicense, type InsertEntitlementLicense,
   type SpecializedLicense, type InsertSpecializedLicense,
   type UserLicenseAssignment, type InsertUserLicenseAssignment,
-  type MicrosoftLicenseKpis, type InsertMicrosoftLicenseKpis
+  type MicrosoftLicenseKpis, type InsertMicrosoftLicenseKpis,
+  type DocumentCategory, type InsertDocumentCategory,
+  type Document, type InsertDocument,
+  type DocumentRevision, type InsertDocumentRevision,
+  type DocumentFeedback, type InsertDocumentFeedback,
+  type AiDocumentImprovement, type InsertAiDocumentImprovement,
+  type DocumentAnalytics, type InsertDocumentAnalytics
 } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -363,6 +370,40 @@ export interface IStorage {
   updateMicrosoftLicenseKpis(id: number, kpis: Partial<InsertMicrosoftLicenseKpis>): Promise<MicrosoftLicenseKpis>;
   deleteMicrosoftLicenseKpis(id: number): Promise<boolean>;
   syncMicrosoftLicenseData(tenantId: string, brand: string): Promise<MicrosoftLicenseKpis>;
+
+  // Documentation and Knowledge Base
+  getDocumentCategories(parentId?: number): Promise<DocumentCategory[]>;
+  getDocumentCategory(id: number): Promise<DocumentCategory | undefined>;
+  createDocumentCategory(category: InsertDocumentCategory): Promise<DocumentCategory>;
+  updateDocumentCategory(id: number, category: Partial<InsertDocumentCategory>): Promise<DocumentCategory>;
+  deleteDocumentCategory(id: number): Promise<boolean>;
+
+  getDocuments(categoryId?: number, status?: string, featured?: boolean): Promise<Document[]>;
+  getDocument(id: number): Promise<Document | undefined>;
+  getDocumentBySlug(slug: string): Promise<Document | undefined>;
+  createDocument(document: InsertDocument): Promise<Document>;
+  updateDocument(id: number, document: Partial<InsertDocument>): Promise<Document>;
+  deleteDocument(id: number): Promise<boolean>;
+  searchDocuments(query: string, categoryId?: number): Promise<Document[]>;
+  incrementDocumentView(id: number, userId?: number): Promise<void>;
+  rateDocumentHelpful(id: number, helpful: boolean): Promise<void>;
+
+  getDocumentRevisions(documentId: number): Promise<DocumentRevision[]>;
+  getDocumentRevision(id: number): Promise<DocumentRevision | undefined>;
+  createDocumentRevision(revision: InsertDocumentRevision): Promise<DocumentRevision>;
+
+  getDocumentFeedback(documentId: number): Promise<DocumentFeedback[]>;
+  createDocumentFeedback(feedback: InsertDocumentFeedback): Promise<DocumentFeedback>;
+
+  getAiDocumentImprovements(documentId?: number, status?: string): Promise<AiDocumentImprovement[]>;
+  createAiDocumentImprovement(improvement: InsertAiDocumentImprovement): Promise<AiDocumentImprovement>;
+  updateAiDocumentImprovement(id: number, improvement: Partial<InsertAiDocumentImprovement>): Promise<AiDocumentImprovement>;
+  approveAiImprovement(id: number, reviewerId: number, notes?: string): Promise<boolean>;
+  rejectAiImprovement(id: number, reviewerId: number, notes?: string): Promise<boolean>;
+  generateAiImprovement(documentId: number, userId: number, improvementType: string): Promise<AiDocumentImprovement>;
+
+  trackDocumentAnalytics(analytics: InsertDocumentAnalytics): Promise<void>;
+  getDocumentAnalytics(documentId: number, action?: string, timeframe?: number): Promise<DocumentAnalytics[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3408,6 +3449,260 @@ export class DatabaseStorage implements IStorage {
       console.error("Error seeding realistic staff:", error);
       throw error;
     }
+  }
+
+  // Documentation and Knowledge Base Implementation
+  async getDocumentCategories(parentId?: number): Promise<DocumentCategory[]> {
+    if (parentId !== undefined) {
+      return await db.select().from(documentCategories).where(eq(documentCategories.parentId, parentId));
+    }
+    return await db.select().from(documentCategories);
+  }
+
+  async getDocumentCategory(id: number): Promise<DocumentCategory | undefined> {
+    const [category] = await db.select().from(documentCategories).where(eq(documentCategories.id, id));
+    return category || undefined;
+  }
+
+  async createDocumentCategory(insertCategory: InsertDocumentCategory): Promise<DocumentCategory> {
+    const [category] = await db
+      .insert(documentCategories)
+      .values(insertCategory)
+      .returning();
+    return category;
+  }
+
+  async updateDocumentCategory(id: number, updateData: Partial<InsertDocumentCategory>): Promise<DocumentCategory> {
+    const [category] = await db
+      .update(documentCategories)
+      .set(updateData)
+      .where(eq(documentCategories.id, id))
+      .returning();
+    return category;
+  }
+
+  async deleteDocumentCategory(id: number): Promise<boolean> {
+    const result = await db.delete(documentCategories).where(eq(documentCategories.id, id));
+    return result.rowCount > 0;
+  }
+
+  async getDocuments(categoryId?: number, status?: string, featured?: boolean): Promise<Document[]> {
+    let query = db.select().from(documents);
+    
+    if (categoryId !== undefined) {
+      query = query.where(eq(documents.categoryId, categoryId));
+    }
+    if (status) {
+      query = query.where(eq(documents.status, status));
+    }
+    if (featured !== undefined) {
+      query = query.where(eq(documents.isFeatured, featured));
+    }
+    
+    return await query;
+  }
+
+  async getDocument(id: number): Promise<Document | undefined> {
+    const [document] = await db.select().from(documents).where(eq(documents.id, id));
+    return document || undefined;
+  }
+
+  async getDocumentBySlug(slug: string): Promise<Document | undefined> {
+    const [document] = await db.select().from(documents).where(eq(documents.slug, slug));
+    return document || undefined;
+  }
+
+  async createDocument(insertDocument: InsertDocument): Promise<Document> {
+    const [document] = await db
+      .insert(documents)
+      .values(insertDocument)
+      .returning();
+    return document;
+  }
+
+  async updateDocument(id: number, updateData: Partial<InsertDocument>): Promise<Document> {
+    const [document] = await db
+      .update(documents)
+      .set(updateData)
+      .where(eq(documents.id, id))
+      .returning();
+    return document;
+  }
+
+  async deleteDocument(id: number): Promise<boolean> {
+    const result = await db.delete(documents).where(eq(documents.id, id));
+    return result.rowCount > 0;
+  }
+
+  async searchDocuments(query: string, categoryId?: number): Promise<Document[]> {
+    // Use SQL ILIKE for case-insensitive search
+    const searchPattern = `%${query.toLowerCase()}%`;
+    
+    if (categoryId) {
+      return await db.select().from(documents)
+        .where(`LOWER(title) ILIKE '${searchPattern}' OR LOWER(content) ILIKE '${searchPattern}' AND category_id = ${categoryId}`);
+    } else {
+      return await db.select().from(documents)
+        .where(`LOWER(title) ILIKE '${searchPattern}' OR LOWER(content) ILIKE '${searchPattern}'`);
+    }
+  }
+
+  async incrementDocumentView(id: number, userId?: number): Promise<void> {
+    // Increment view count using SQL
+    await db.execute(`UPDATE documents SET view_count = COALESCE(view_count, 0) + 1 WHERE id = ${id}`);
+    
+    if (userId) {
+      await this.trackDocumentAnalytics({
+        documentId: id,
+        userId: userId,
+        action: 'view',
+        sessionId: `session_${Date.now()}`,
+        timeSpent: 0
+      });
+    }
+  }
+
+  async rateDocumentHelpful(id: number, helpful: boolean): Promise<void> {
+    if (helpful) {
+      await db.execute(`UPDATE documents SET helpful_count = COALESCE(helpful_count, 0) + 1 WHERE id = ${id}`);
+    }
+  }
+
+  async getDocumentRevisions(documentId: number): Promise<DocumentRevision[]> {
+    return await db.select().from(documentRevisions).where(eq(documentRevisions.documentId, documentId));
+  }
+
+  async getDocumentRevision(id: number): Promise<DocumentRevision | undefined> {
+    const [revision] = await db.select().from(documentRevisions).where(eq(documentRevisions.id, id));
+    return revision || undefined;
+  }
+
+  async createDocumentRevision(insertRevision: InsertDocumentRevision): Promise<DocumentRevision> {
+    const [revision] = await db
+      .insert(documentRevisions)
+      .values(insertRevision)
+      .returning();
+    return revision;
+  }
+
+  async getDocumentFeedback(documentId: number): Promise<DocumentFeedback[]> {
+    return await db.select().from(documentFeedback).where(eq(documentFeedback.documentId, documentId));
+  }
+
+  async createDocumentFeedback(insertFeedback: InsertDocumentFeedback): Promise<DocumentFeedback> {
+    const [feedback] = await db
+      .insert(documentFeedback)
+      .values(insertFeedback)
+      .returning();
+    return feedback;
+  }
+
+  async getAiDocumentImprovements(documentId?: number, status?: string): Promise<AiDocumentImprovement[]> {
+    let query = db.select().from(aiDocumentImprovements);
+    
+    if (documentId !== undefined) {
+      query = query.where(eq(aiDocumentImprovements.documentId, documentId));
+    }
+    if (status) {
+      query = query.where(eq(aiDocumentImprovements.status, status));
+    }
+    
+    return await query;
+  }
+
+  async createAiDocumentImprovement(insertImprovement: InsertAiDocumentImprovement): Promise<AiDocumentImprovement> {
+    const [improvement] = await db
+      .insert(aiDocumentImprovements)
+      .values(insertImprovement)
+      .returning();
+    return improvement;
+  }
+
+  async updateAiDocumentImprovement(id: number, updateData: Partial<InsertAiDocumentImprovement>): Promise<AiDocumentImprovement> {
+    const [improvement] = await db
+      .update(aiDocumentImprovements)
+      .set(updateData)
+      .where(eq(aiDocumentImprovements.id, id))
+      .returning();
+    return improvement;
+  }
+
+  async approveAiImprovement(id: number, reviewerId: number, notes?: string): Promise<boolean> {
+    const [improvement] = await db
+      .update(aiDocumentImprovements)
+      .set({
+        status: 'approved',
+        reviewedBy: reviewerId,
+        reviewNotes: notes,
+        appliedAt: new Date()
+      })
+      .where(eq(aiDocumentImprovements.id, id))
+      .returning();
+    
+    if (improvement) {
+      // Apply the improvement to the document
+      await db
+        .update(documents)
+        .set({ content: improvement.improvedContent })
+        .where(eq(documents.id, improvement.documentId));
+    }
+    
+    return !!improvement;
+  }
+
+  async rejectAiImprovement(id: number, reviewerId: number, notes?: string): Promise<boolean> {
+    const result = await db
+      .update(aiDocumentImprovements)
+      .set({
+        status: 'rejected',
+        reviewedBy: reviewerId,
+        reviewNotes: notes
+      })
+      .where(eq(aiDocumentImprovements.id, id));
+    
+    return result.rowCount > 0;
+  }
+
+  async generateAiImprovement(documentId: number, userId: number, improvementType: string): Promise<AiDocumentImprovement> {
+    // This would integrate with OpenAI API to generate improvements
+    // For now, return a placeholder
+    const document = await this.getDocument(documentId);
+    if (!document) {
+      throw new Error('Document not found');
+    }
+
+    // Simulate AI improvement generation
+    const aiImprovement = {
+      documentId,
+      originalContent: document.content,
+      improvedContent: `[AI IMPROVED] ${document.content}`,
+      improvementType,
+      improvementReason: `AI suggested improvements for ${improvementType}`,
+      confidenceScore: 0.85,
+      userId,
+      status: 'pending' as const
+    };
+
+    return await this.createAiDocumentImprovement(aiImprovement);
+  }
+
+  async trackDocumentAnalytics(insertAnalytics: InsertDocumentAnalytics): Promise<void> {
+    await db.insert(documentAnalytics).values(insertAnalytics);
+  }
+
+  async getDocumentAnalytics(documentId: number, action?: string, timeframe?: number): Promise<DocumentAnalytics[]> {
+    let whereClause = `document_id = ${documentId}`;
+    
+    if (action) {
+      whereClause += ` AND action = '${action}'`;
+    }
+    
+    if (timeframe) {
+      const since = new Date(Date.now() - timeframe * 24 * 60 * 60 * 1000);
+      whereClause += ` AND created_at >= '${since.toISOString()}'`;
+    }
+    
+    return await db.execute(`SELECT * FROM document_analytics WHERE ${whereClause} ORDER BY created_at DESC`);
   }
 }
 

@@ -1,4 +1,5 @@
-import { pgTable, text, serial, integer, boolean, timestamp, decimal, date, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, serial, integer, boolean, timestamp, decimal, date, jsonb, real } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -1723,3 +1724,220 @@ export type FacilityRequest = typeof facilityRequests.$inferSelect;
 
 export type InsertFacilityIncident = z.infer<typeof insertFacilityIncidentSchema>;
 export type FacilityIncident = typeof facilityIncidents.$inferSelect;
+
+// Documentation and Knowledge Base tables
+export const documentCategories = pgTable("document_categories", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  color: varchar("color", { length: 7 }).default("#3B82F6"), // hex color
+  icon: varchar("icon", { length: 50 }).default("Book"),
+  parentId: integer("parent_id").references(() => documentCategories.id),
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const documents = pgTable("documents", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 255 }).notNull().unique(),
+  content: text("content").notNull(),
+  excerpt: text("excerpt"),
+  categoryId: integer("category_id").references(() => documentCategories.id),
+  authorId: integer("author_id").references(() => users.id),
+  status: varchar("status", { length: 20 }).default("draft"), // draft, published, archived
+  version: varchar("version", { length: 20 }).default("1.0"),
+  tags: text("tags").array().default([]),
+  searchTerms: text("search_terms").array().default([]),
+  readTime: integer("read_time").default(5), // minutes
+  difficulty: varchar("difficulty", { length: 20 }).default("beginner"), // beginner, intermediate, advanced
+  lastReviewedAt: timestamp("last_reviewed_at"),
+  viewCount: integer("view_count").default(0),
+  helpfulCount: integer("helpful_count").default(0),
+  isPublic: boolean("is_public").default(true),
+  isFeatured: boolean("is_featured").default(false),
+  metaTitle: varchar("meta_title", { length: 255 }),
+  metaDescription: text("meta_description"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const documentRevisions = pgTable("document_revisions", {
+  id: serial("id").primaryKey(),
+  documentId: integer("document_id").references(() => documents.id),
+  title: varchar("title", { length: 255 }).notNull(),
+  content: text("content").notNull(),
+  version: varchar("version", { length: 20 }).notNull(),
+  changeLog: text("change_log"),
+  authorId: integer("author_id").references(() => users.id),
+  aiImproved: boolean("ai_improved").default(false),
+  aiImprovements: text("ai_improvements"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const documentFeedback = pgTable("document_feedback", {
+  id: serial("id").primaryKey(),
+  documentId: integer("document_id").references(() => documents.id),
+  userId: integer("user_id").references(() => users.id),
+  rating: integer("rating").notNull(), // 1-5 stars
+  feedback: text("feedback"),
+  isHelpful: boolean("is_helpful"),
+  improvementSuggestions: text("improvement_suggestions"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const aiDocumentImprovements = pgTable("ai_document_improvements", {
+  id: serial("id").primaryKey(),
+  documentId: integer("document_id").references(() => documents.id),
+  originalContent: text("original_content").notNull(),
+  improvedContent: text("improved_content").notNull(),
+  improvementType: varchar("improvement_type", { length: 50 }).notNull(), // clarity, accuracy, completeness, structure
+  improvementReason: text("improvement_reason"),
+  confidenceScore: real("confidence_score").default(0.0), // 0.0 to 1.0
+  userId: integer("user_id").references(() => users.id),
+  status: varchar("status", { length: 20 }).default("pending"), // pending, approved, rejected
+  appliedAt: timestamp("applied_at"),
+  reviewedBy: integer("reviewed_by").references(() => users.id),
+  reviewNotes: text("review_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const documentAnalytics = pgTable("document_analytics", {
+  id: serial("id").primaryKey(),
+  documentId: integer("document_id").references(() => documents.id),
+  userId: integer("user_id").references(() => users.id),
+  action: varchar("action", { length: 50 }).notNull(), // view, search, download, share, helpful_yes, helpful_no
+  sessionId: varchar("session_id", { length: 100 }),
+  userAgent: text("user_agent"),
+  referrer: text("referrer"),
+  searchQuery: text("search_query"),
+  timeSpent: integer("time_spent"), // seconds
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations for documentation tables
+export const documentCategoriesRelations = relations(documentCategories, ({ one, many }) => ({
+  parent: one(documentCategories, {
+    fields: [documentCategories.parentId],
+    references: [documentCategories.id],
+  }),
+  children: many(documentCategories),
+  documents: many(documents),
+}));
+
+export const documentsRelations = relations(documents, ({ one, many }) => ({
+  category: one(documentCategories, {
+    fields: [documents.categoryId],
+    references: [documentCategories.id],
+  }),
+  author: one(users, {
+    fields: [documents.authorId],
+    references: [users.id],
+  }),
+  revisions: many(documentRevisions),
+  feedback: many(documentFeedback),
+  aiImprovements: many(aiDocumentImprovements),
+  analytics: many(documentAnalytics),
+}));
+
+export const documentRevisionsRelations = relations(documentRevisions, ({ one }) => ({
+  document: one(documents, {
+    fields: [documentRevisions.documentId],
+    references: [documents.id],
+  }),
+  author: one(users, {
+    fields: [documentRevisions.authorId],
+    references: [users.id],
+  }),
+}));
+
+export const documentFeedbackRelations = relations(documentFeedback, ({ one }) => ({
+  document: one(documents, {
+    fields: [documentFeedback.documentId],
+    references: [documents.id],
+  }),
+  user: one(users, {
+    fields: [documentFeedback.userId],
+    references: [users.id],
+  }),
+}));
+
+export const aiDocumentImprovementsRelations = relations(aiDocumentImprovements, ({ one }) => ({
+  document: one(documents, {
+    fields: [aiDocumentImprovements.documentId],
+    references: [documents.id],
+  }),
+  user: one(users, {
+    fields: [aiDocumentImprovements.userId],
+    references: [users.id],
+  }),
+  reviewer: one(users, {
+    fields: [aiDocumentImprovements.reviewedBy],
+    references: [users.id],
+  }),
+}));
+
+export const documentAnalyticsRelations = relations(documentAnalytics, ({ one }) => ({
+  document: one(documents, {
+    fields: [documentAnalytics.documentId],
+    references: [documents.id],
+  }),
+  user: one(users, {
+    fields: [documentAnalytics.userId],
+    references: [users.id],
+  }),
+}));
+
+// Insert schemas for documentation
+export const insertDocumentCategorySchema = createInsertSchema(documentCategories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDocumentSchema = createInsertSchema(documents).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDocumentRevisionSchema = createInsertSchema(documentRevisions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertDocumentFeedbackSchema = createInsertSchema(documentFeedback).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAiDocumentImprovementSchema = createInsertSchema(aiDocumentImprovements).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertDocumentAnalyticsSchema = createInsertSchema(documentAnalytics).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Documentation types
+export type InsertDocumentCategory = z.infer<typeof insertDocumentCategorySchema>;
+export type DocumentCategory = typeof documentCategories.$inferSelect;
+
+export type InsertDocument = z.infer<typeof insertDocumentSchema>;
+export type Document = typeof documents.$inferSelect;
+
+export type InsertDocumentRevision = z.infer<typeof insertDocumentRevisionSchema>;
+export type DocumentRevision = typeof documentRevisions.$inferSelect;
+
+export type InsertDocumentFeedback = z.infer<typeof insertDocumentFeedbackSchema>;
+export type DocumentFeedback = typeof documentFeedback.$inferSelect;
+
+export type InsertAiDocumentImprovement = z.infer<typeof insertAiDocumentImprovementSchema>;
+export type AiDocumentImprovement = typeof aiDocumentImprovements.$inferSelect;
+
+export type InsertDocumentAnalytics = z.infer<typeof insertDocumentAnalyticsSchema>;
+export type DocumentAnalytics = typeof documentAnalytics.$inferSelect;
