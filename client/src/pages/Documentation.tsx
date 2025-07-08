@@ -66,19 +66,21 @@ export default function Documentation({ brand }: DocumentationProps) {
   const queryClient = useQueryClient();
 
   // Fetch data
-  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
+  const { data: categories = [], isLoading: categoriesLoading, error: categoriesError } = useQuery({
     queryKey: ["/api/documentation/categories"],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/documentation/categories");
-      return response.json();
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
     },
   });
 
-  const { data: documents = [], isLoading: documentsLoading } = useQuery({
+  const { data: documents = [], isLoading: documentsLoading, error: documentsError } = useQuery({
     queryKey: ["/api/documentation/documents", selectedCategory],
     queryFn: async () => {
       const response = await apiRequest("GET", `/api/documentation/documents?categoryId=${selectedCategory || ""}`);
-      return response.json();
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
     },
   });
 
@@ -86,7 +88,8 @@ export default function Documentation({ brand }: DocumentationProps) {
     queryKey: ["/api/documentation/documents", "featured"],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/documentation/documents?featured=true");
-      return response.json();
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
     },
   });
 
@@ -94,7 +97,8 @@ export default function Documentation({ brand }: DocumentationProps) {
     queryKey: ["/api/documentation/ai-improvements"],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/documentation/documents/1/ai-improvements");
-      return response.json();
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
     },
     enabled: !!selectedDocument,
   });
@@ -307,7 +311,7 @@ export default function Documentation({ brand }: DocumentationProps) {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {categories.map((category: DocumentCategory) => (
+                              {Array.isArray(categories) && categories.map((category: DocumentCategory) => (
                                 <SelectItem key={category.id} value={category.id.toString()}>
                                   {category.name}
                                 </SelectItem>
@@ -422,7 +426,7 @@ export default function Documentation({ brand }: DocumentationProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
-                {categories.map((category: DocumentCategory) => (
+                {Array.isArray(categories) && categories.map((category: DocumentCategory) => (
                   <SelectItem key={category.id} value={category.id.toString()}>
                     {category.name}
                   </SelectItem>
@@ -448,7 +452,7 @@ export default function Documentation({ brand }: DocumentationProps) {
                       <BookOpen className="w-4 h-4 mr-2" />
                       All Documents
                     </Button>
-                    {categories.map((category: DocumentCategory) => (
+                    {Array.isArray(categories) && categories.map((category: DocumentCategory) => (
                       <Button
                         key={category.id}
                         variant={selectedCategory === category.id ? "secondary" : "ghost"}
