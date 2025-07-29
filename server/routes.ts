@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { seedEnhancedOrganization } from "./simpleSeed";
+import { seedEnhancedLicensing } from "./licensingSeed";
 import { 
   insertVendorSchema, insertLicenseSchema, insertIncidentSchema, insertCloudServiceSchema,
   insertCorporateSchema, insertDivisionSchema, insertDepartmentSchema, insertFunctionSchema, insertPersonaSchema, insertUserSchema,
@@ -2729,6 +2730,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error seeding enhanced organizational structure:", error);
       res.status(500).json({ 
         error: "Failed to seed enhanced organizational structure",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.post("/api/seed/enhanced-licensing", async (req, res) => {
+    try {
+      console.log("Starting enhanced licensing structure seeding...");
+      const result = await seedEnhancedLicensing();
+      res.json({ 
+        success: true, 
+        message: "Enhanced licensing structure seeded successfully",
+        result,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error seeding enhanced licensing structure:", error);
+      res.status(500).json({ 
+        error: "Failed to seed enhanced licensing structure",
         details: error instanceof Error ? error.message : "Unknown error"
       });
     }

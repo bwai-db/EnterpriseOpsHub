@@ -422,6 +422,34 @@ export default function LicensingManagement() {
     },
   });
 
+  const seedEnhancedLicensingMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/seed/enhanced-licensing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (!response.ok) throw new Error('Failed to seed enhanced licensing structure');
+      return response.json();
+    },
+    onSuccess: (data) => {
+      // Invalidate all licensing-related queries to refresh the UI
+      queryClient.invalidateQueries({ queryKey: ['/api/corporate-license-packs'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/entitlement-licenses'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/specialized-licenses'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user-license-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/microsoft-license-kpis'] });
+      
+      toast({ 
+        title: "Enhanced Licensing Seeded Successfully", 
+        description: `Created ${data.result.licensePacks} license packs, ${data.result.entitlementLicenses} entitlement licenses, and ${data.result.specializedLicenses} specialized licenses across all brands with total value of $${data.result.totalValue.toLocaleString()}`
+      });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to seed enhanced licensing structure", variant: "destructive" });
+    },
+  });
+
   const onCreatePack = (data: any) => {
     const packData = {
       ...data,
@@ -463,6 +491,10 @@ export default function LicensingManagement() {
 
   const handleSeedEnterpriseLicenses = () => {
     seedEnterpriseLicensesMutation.mutate();
+  };
+
+  const handleSeedEnhancedLicensing = () => {
+    seedEnhancedLicensingMutation.mutate();
   };
 
   const getStatusBadgeVariant = (status: string) => {
@@ -517,6 +549,36 @@ export default function LicensingManagement() {
                 <span className="font-semibold">Shaypops Inc.</span>
                 <span className="text-sm text-gray-500">Commercial Licensing</span>
               </Button>
+            </div>
+            
+            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Comprehensive Licensing Setup</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Initialize complete licensing structure for all brands</p>
+                </div>
+                <Button
+                  onClick={handleSeedEnhancedLicensing}
+                  disabled={seedEnhancedLicensingMutation.isPending}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                  size="sm"
+                >
+                  {seedEnhancedLicensingMutation.isPending ? (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      Seeding...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Seed Enhanced Licensing
+                    </>
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                This will create 9 license packs, 7 entitlement licenses, 4 specialized licenses, and Microsoft KPIs across all brands (Blorcs, Shaypops, TechNova) with a total value of $236,803.
+              </p>
             </div>
           </CardContent>
         </Card>
