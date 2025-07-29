@@ -1105,7 +1105,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       res.json(serviceRequests);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch service requests" });
+      console.error("Service requests error:", error);
+      res.status(500).json({ message: "Failed to fetch service requests", error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -1128,6 +1129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const serviceRequest = await storage.createServiceRequest(requestData);
       res.status(201).json(serviceRequest);
     } catch (error) {
+      console.error("Service request creation error:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid service request data", errors: error.errors });
       }

@@ -544,6 +544,7 @@ export const serviceRequests = pgTable("service_requests", {
   satisfactionRating: integer("satisfaction_rating"), // 1-5 scale
   resolutionTime: integer("resolution_time"), // minutes
   escalationLevel: integer("escalation_level").default(0), // 0 = not escalated
+  persona: text("persona").notNull(), // user persona/role for access control
   servicenowTicketId: text("servicenow_ticket_id"), // for future ServiceNow integration
   brand: text("brand").notNull(),
   createdAt: timestamp("created_at").defaultNow(),

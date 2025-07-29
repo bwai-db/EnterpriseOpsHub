@@ -531,23 +531,20 @@ export default function RetailOperations({ selectedBrand }: RetailOperationsProp
   // Service request mutation
   const createServiceRequestMutation = useMutation({
     mutationFn: async (data: ServiceRequestFormData) => {
-      return apiRequest("/api/service-requests", {
-        method: "POST",
-        body: JSON.stringify({
-          requestType: data.requestType,
-          department: data.department,
-          priority: data.priority,
-          title: data.title,
-          description: data.description,
-          brand: selectedBrand === "all" ? "blorcs" : selectedBrand,
-          storeId: data.storeId ? parseInt(data.storeId) : undefined,
-          requesterName: data.requesterName,
-          requesterEmail: data.requesterEmail,
-          requesterPhone: data.requesterPhone,
-          requesterRole: data.requesterRole,
-          persona: data.requesterRole, // Use requester role as persona
-          category: data.requestType, // Map requestType to category for the database
-        }),
+      return apiRequest("POST", "/api/service-requests", {
+        requestType: data.requestType,
+        department: data.department,
+        priority: data.priority,
+        title: data.title,
+        description: data.description,
+        brand: selectedBrand === "all" ? "blorcs" : selectedBrand,
+        storeId: data.storeId ? parseInt(data.storeId) : undefined,
+        requesterName: data.requesterName,
+        requesterEmail: data.requesterEmail,
+        requesterPhone: data.requesterPhone,
+        requesterRole: data.requesterRole,
+        persona: data.requesterRole, // Use requester role as persona
+        category: data.requestType, // Map requestType to category for the database
       });
     },
     onSuccess: () => {
