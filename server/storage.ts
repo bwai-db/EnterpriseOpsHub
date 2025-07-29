@@ -10,6 +10,7 @@ import {
   shipments, shipmentStages, shipmentEvents, shippingCarriers, shipmentRoutes, shipmentDocuments, shipmentAlerts,
   facilities, facilityProjects, facilityImprovements, facilityRequests, facilityIncidents,
   corporateLicensePacks, entitlementLicenses, specializedLicenses, userLicenseAssignments, microsoftLicenseKpis,
+  zeroTrustPolicies, conditionalAccessAnalytics, mfaFatigueMetrics, zeroTrustKpis, securityIncidents,
   documentCategories, documents, documentRevisions, documentFeedback, aiDocumentImprovements, documentAnalytics,
   brands, brandOnboardingSteps, brandIntegrations,
   type User, type InsertUser,
@@ -68,6 +69,11 @@ import {
   type SpecializedLicense, type InsertSpecializedLicense,
   type UserLicenseAssignment, type InsertUserLicenseAssignment,
   type MicrosoftLicenseKpis, type InsertMicrosoftLicenseKpis,
+  type ZeroTrustPolicy, type InsertZeroTrustPolicy,
+  type ConditionalAccessAnalytics, type InsertConditionalAccessAnalytics,
+  type MfaFatigueMetrics, type InsertMfaFatigueMetrics,
+  type ZeroTrustKpis, type InsertZeroTrustKpis,
+  type SecurityIncident, type InsertSecurityIncident,
   type DocumentCategory, type InsertDocumentCategory,
   type Document, type InsertDocument,
   type DocumentRevision, type InsertDocumentRevision,
@@ -374,6 +380,42 @@ export interface IStorage {
   updateMicrosoftLicenseKpis(id: number, kpis: Partial<InsertMicrosoftLicenseKpis>): Promise<MicrosoftLicenseKpis>;
   deleteMicrosoftLicenseKpis(id: number): Promise<boolean>;
   syncMicrosoftLicenseData(tenantId: string, brand: string): Promise<MicrosoftLicenseKpis>;
+
+  // Zero Trust Security Posture
+  getZeroTrustPolicies(brand?: string, policyType?: string): Promise<ZeroTrustPolicy[]>;
+  getZeroTrustPolicy(id: number): Promise<ZeroTrustPolicy | undefined>;
+  createZeroTrustPolicy(policy: InsertZeroTrustPolicy): Promise<ZeroTrustPolicy>;
+  updateZeroTrustPolicy(id: number, policy: Partial<InsertZeroTrustPolicy>): Promise<ZeroTrustPolicy>;
+  deleteZeroTrustPolicy(id: number): Promise<boolean>;
+
+  getConditionalAccessAnalytics(brand?: string, policyId?: number, dateRange?: { start: string; end: string }): Promise<ConditionalAccessAnalytics[]>;
+  getConditionalAccessAnalytic(id: number): Promise<ConditionalAccessAnalytics | undefined>;
+  createConditionalAccessAnalytics(analytics: InsertConditionalAccessAnalytics): Promise<ConditionalAccessAnalytics>;
+  updateConditionalAccessAnalytics(id: number, analytics: Partial<InsertConditionalAccessAnalytics>): Promise<ConditionalAccessAnalytics>;
+  deleteConditionalAccessAnalytics(id: number): Promise<boolean>;
+
+  getMfaFatigueMetrics(brand?: string, userId?: number, dateRange?: { start: string; end: string }): Promise<MfaFatigueMetrics[]>;
+  getMfaFatigueMetric(id: number): Promise<MfaFatigueMetrics | undefined>;
+  createMfaFatigueMetrics(metrics: InsertMfaFatigueMetrics): Promise<MfaFatigueMetrics>;
+  updateMfaFatigueMetrics(id: number, metrics: Partial<InsertMfaFatigueMetrics>): Promise<MfaFatigueMetrics>;
+  deleteMfaFatigueMetrics(id: number): Promise<boolean>;
+  calculateMfaFatigueScore(userId: number): Promise<number>;
+
+  getZeroTrustKpis(brand?: string, month?: number, year?: number): Promise<ZeroTrustKpis[]>;
+  getZeroTrustKpi(id: number): Promise<ZeroTrustKpis | undefined>;
+  createZeroTrustKpis(kpis: InsertZeroTrustKpis): Promise<ZeroTrustKpis>;
+  updateZeroTrustKpis(id: number, kpis: Partial<InsertZeroTrustKpis>): Promise<ZeroTrustKpis>;
+  deleteZeroTrustKpis(id: number): Promise<boolean>;
+  syncZeroTrustAssessment(tenantId: string, brand: string): Promise<ZeroTrustKpis>;
+
+  getSecurityIncidents(brand?: string, status?: string, severity?: string): Promise<SecurityIncident[]>;
+  getSecurityIncident(id: number): Promise<SecurityIncident | undefined>;
+  getSecurityIncidentByIncidentId(incidentId: string): Promise<SecurityIncident | undefined>;
+  createSecurityIncident(incident: InsertSecurityIncident): Promise<SecurityIncident>;
+  updateSecurityIncident(id: number, incident: Partial<InsertSecurityIncident>): Promise<SecurityIncident>;
+  deleteSecurityIncident(id: number): Promise<boolean>;
+  acknowledgeSecurityIncident(id: number, acknowledgedBy: string): Promise<boolean>;
+  resolveSecurityIncident(id: number, resolvedBy: string, resolution: string): Promise<boolean>;
 
   // Documentation and Knowledge Base
   getDocumentCategories(parentId?: number): Promise<DocumentCategory[]>;
@@ -2650,6 +2692,341 @@ export class DatabaseStorage implements IStorage {
       console.error("Error seeding enterprise licenses:", error);
       throw error;
     }
+  }
+
+  // Zero Trust Security Posture Implementation
+
+  // Zero Trust Policies
+  async getZeroTrustPolicies(brand?: string, policyType?: string): Promise<ZeroTrustPolicy[]> {
+    let query = db.select().from(zeroTrustPolicies);
+    
+    const conditions = [];
+    if (brand && brand !== 'all') conditions.push(eq(zeroTrustPolicies.brand, brand));
+    if (policyType) conditions.push(eq(zeroTrustPolicies.policyType, policyType));
+    
+    if (conditions.length > 0) {
+      query = query.where(conditions.reduce((acc, condition) => acc && condition)) as any;
+    }
+    
+    return await query;
+  }
+
+  async getZeroTrustPolicy(id: number): Promise<ZeroTrustPolicy | undefined> {
+    const [policy] = await db.select().from(zeroTrustPolicies).where(eq(zeroTrustPolicies.id, id));
+    return policy || undefined;
+  }
+
+  async createZeroTrustPolicy(insertPolicy: InsertZeroTrustPolicy): Promise<ZeroTrustPolicy> {
+    const [policy] = await db
+      .insert(zeroTrustPolicies)
+      .values(insertPolicy)
+      .returning();
+    return policy;
+  }
+
+  async updateZeroTrustPolicy(id: number, updateData: Partial<InsertZeroTrustPolicy>): Promise<ZeroTrustPolicy> {
+    const [policy] = await db
+      .update(zeroTrustPolicies)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(zeroTrustPolicies.id, id))
+      .returning();
+    return policy;
+  }
+
+  async deleteZeroTrustPolicy(id: number): Promise<boolean> {
+    const result = await db.delete(zeroTrustPolicies).where(eq(zeroTrustPolicies.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Conditional Access Analytics
+  async getConditionalAccessAnalytics(brand?: string, policyId?: number, dateRange?: { start: string; end: string }): Promise<ConditionalAccessAnalytics[]> {
+    let query = db.select().from(conditionalAccessAnalytics);
+    
+    const conditions = [];
+    if (brand && brand !== 'all') conditions.push(eq(conditionalAccessAnalytics.brand, brand));
+    if (policyId) conditions.push(eq(conditionalAccessAnalytics.policyId, policyId));
+    
+    if (conditions.length > 0) {
+      query = query.where(conditions.reduce((acc, condition) => acc && condition)) as any;
+    }
+    
+    return await query;
+  }
+
+  async getConditionalAccessAnalytic(id: number): Promise<ConditionalAccessAnalytics | undefined> {
+    const [analytics] = await db.select().from(conditionalAccessAnalytics).where(eq(conditionalAccessAnalytics.id, id));
+    return analytics || undefined;
+  }
+
+  async createConditionalAccessAnalytics(insertAnalytics: InsertConditionalAccessAnalytics): Promise<ConditionalAccessAnalytics> {
+    const [analytics] = await db
+      .insert(conditionalAccessAnalytics)
+      .values(insertAnalytics)
+      .returning();
+    return analytics;
+  }
+
+  async updateConditionalAccessAnalytics(id: number, updateData: Partial<InsertConditionalAccessAnalytics>): Promise<ConditionalAccessAnalytics> {
+    const [analytics] = await db
+      .update(conditionalAccessAnalytics)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(conditionalAccessAnalytics.id, id))
+      .returning();
+    return analytics;
+  }
+
+  async deleteConditionalAccessAnalytics(id: number): Promise<boolean> {
+    const result = await db.delete(conditionalAccessAnalytics).where(eq(conditionalAccessAnalytics.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // MFA Fatigue Metrics
+  async getMfaFatigueMetrics(brand?: string, userId?: number, dateRange?: { start: string; end: string }): Promise<MfaFatigueMetrics[]> {
+    let query = db.select().from(mfaFatigueMetrics);
+    
+    const conditions = [];
+    if (brand && brand !== 'all') conditions.push(eq(mfaFatigueMetrics.brand, brand));
+    if (userId) conditions.push(eq(mfaFatigueMetrics.userId, userId));
+    
+    if (conditions.length > 0) {
+      query = query.where(conditions.reduce((acc, condition) => acc && condition)) as any;
+    }
+    
+    return await query;
+  }
+
+  async getMfaFatigueMetric(id: number): Promise<MfaFatigueMetrics | undefined> {
+    const [metrics] = await db.select().from(mfaFatigueMetrics).where(eq(mfaFatigueMetrics.id, id));
+    return metrics || undefined;
+  }
+
+  async createMfaFatigueMetrics(insertMetrics: InsertMfaFatigueMetrics): Promise<MfaFatigueMetrics> {
+    const [metrics] = await db
+      .insert(mfaFatigueMetrics)
+      .values(insertMetrics)
+      .returning();
+    return metrics;
+  }
+
+  async updateMfaFatigueMetrics(id: number, updateData: Partial<InsertMfaFatigueMetrics>): Promise<MfaFatigueMetrics> {
+    const [metrics] = await db
+      .update(mfaFatigueMetrics)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(mfaFatigueMetrics.id, id))
+      .returning();
+    return metrics;
+  }
+
+  async deleteMfaFatigueMetrics(id: number): Promise<boolean> {
+    const result = await db.delete(mfaFatigueMetrics).where(eq(mfaFatigueMetrics.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async calculateMfaFatigueScore(userId: number): Promise<number> {
+    // Calculate MFA fatigue score based on user's recent authentication patterns
+    const recentMetrics = await db.select()
+      .from(mfaFatigueMetrics)
+      .where(eq(mfaFatigueMetrics.userId, userId));
+    
+    if (recentMetrics.length === 0) return 0;
+    
+    // Calculate weighted average based on frequency and denial patterns
+    const avgChallenges = recentMetrics.reduce((sum, m) => sum + m.dailyMfaChallenges, 0) / recentMetrics.length;
+    const avgDenials = recentMetrics.reduce((sum, m) => sum + m.mfaDenials, 0) / recentMetrics.length;
+    const avgApprovals = recentMetrics.reduce((sum, m) => sum + m.mfaApprovals, 0) / recentMetrics.length;
+    
+    const denialRate = avgApprovals > 0 ? (avgDenials / (avgDenials + avgApprovals)) * 100 : 0;
+    const challengeIntensity = Math.min(avgChallenges / 10, 1) * 50; // Cap at 50 points for high challenge volume
+    
+    return Math.min(denialRate + challengeIntensity, 100);
+  }
+
+  // Zero Trust KPIs
+  async getZeroTrustKpis(brand?: string, month?: number, year?: number): Promise<ZeroTrustKpis[]> {
+    let query = db.select().from(zeroTrustKpis);
+    
+    if (brand && brand !== "all") {
+      query = query.where(eq(zeroTrustKpis.brand, brand));
+    }
+    
+    if (month && year) {
+      query = query.where(eq(zeroTrustKpis.month, month)).where(eq(zeroTrustKpis.year, year));
+    }
+    
+    return await query;
+  }
+
+  async getZeroTrustKpi(id: number): Promise<ZeroTrustKpis | undefined> {
+    const [kpi] = await db.select().from(zeroTrustKpis).where(eq(zeroTrustKpis.id, id));
+    return kpi || undefined;
+  }
+
+  async createZeroTrustKpis(insertKpis: InsertZeroTrustKpis): Promise<ZeroTrustKpis> {
+    const [kpis] = await db
+      .insert(zeroTrustKpis)
+      .values(insertKpis)
+      .returning();
+    return kpis;
+  }
+
+  async updateZeroTrustKpis(id: number, updateData: Partial<InsertZeroTrustKpis>): Promise<ZeroTrustKpis> {
+    const [kpis] = await db
+      .update(zeroTrustKpis)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(zeroTrustKpis.id, id))
+      .returning();
+    return kpis;
+  }
+
+  async deleteZeroTrustKpis(id: number): Promise<boolean> {
+    const result = await db.delete(zeroTrustKpis).where(eq(zeroTrustKpis.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async syncZeroTrustAssessment(tenantId: string, brand: string): Promise<ZeroTrustKpis> {
+    // Simulate Zero Trust assessment data collection from Microsoft Graph API
+    const currentDate = new Date();
+    
+    // Generate realistic Zero Trust maturity scores based on enterprise patterns
+    const identityScore = 85 + Math.random() * 10; // 85-95%
+    const deviceScore = 78 + Math.random() * 12; // 78-90%
+    const applicationScore = 82 + Math.random() * 13; // 82-95%
+    const dataScore = 73 + Math.random() * 17; // 73-90%
+    const infrastructureScore = 80 + Math.random() * 15; // 80-95%
+    const networkScore = 76 + Math.random() * 14; // 76-90%
+    
+    const overallScore = (identityScore + deviceScore + applicationScore + dataScore + infrastructureScore + networkScore) / 6;
+    
+    // Generate realistic user metrics
+    const totalUsers = brand === "blorcs" ? 1847 : 365;
+    const mfaEnabledUsers = Math.floor(totalUsers * 0.94); // 94% MFA adoption
+    const mfaAdoptionRate = (mfaEnabledUsers / totalUsers) * 100;
+    const avgMfaChallenges = 3.2 + Math.random() * 1.8; // 3.2-5.0 challenges per day
+    const mfaFatigueIncidents = Math.floor(totalUsers * 0.03); // 3% fatigue incidents
+    
+    // Security posture metrics
+    const highRiskUsers = Math.floor(totalUsers * 0.02); // 2% high risk
+    const compromisedAccounts = Math.floor(totalUsers * 0.005); // 0.5% compromised
+    
+    // Conditional Access metrics
+    const totalPolicies = brand === "blorcs" ? 24 : 16;
+    const activePolicies = Math.floor(totalPolicies * 0.92); // 92% active
+    const policyViolations = Math.floor(totalUsers * 0.08); // 8% violations
+    
+    const kpiData: InsertZeroTrustKpis = {
+      tenantId,
+      month: currentDate.getMonth() + 1,
+      year: currentDate.getFullYear(),
+      overallMaturityScore: overallScore.toFixed(2),
+      identitySecurityScore: identityScore.toFixed(2),
+      deviceSecurityScore: deviceScore.toFixed(2),
+      applicationSecurityScore: applicationScore.toFixed(2),
+      dataSecurityScore: dataScore.toFixed(2),
+      infrastructureSecurityScore: infrastructureScore.toFixed(2),
+      networkSecurityScore: networkScore.toFixed(2),
+      totalUsers,
+      mfaEnabledUsers,
+      mfaAdoptionRate: mfaAdoptionRate.toFixed(2),
+      averageMfaChallengesPerUser: avgMfaChallenges.toFixed(2),
+      mfaFatigueIncidents,
+      highRiskUsers,
+      compromisedAccounts,
+      conditionalAccessPolicies: totalPolicies,
+      activePolicies,
+      policyViolations,
+      privilegedAccessUsers: Math.floor(totalUsers * 0.15), // 15% privileged
+      deviceComplianceRate: (88 + Math.random() * 10).toFixed(2), // 88-98%
+      applicationProtectionCoverage: (85 + Math.random() * 12).toFixed(2), // 85-97%
+      dataClassificationCoverage: (76 + Math.random() * 14).toFixed(2), // 76-90%
+      networkSegmentationScore: (82 + Math.random() * 13).toFixed(2), // 82-95%
+      identityGovernanceScore: (79 + Math.random() * 16).toFixed(2), // 79-95%
+      threatDetectionCoverage: (91 + Math.random() * 7).toFixed(2), // 91-98%
+      incidentResponseTime: (15 + Math.random() * 25).toFixed(1), // 15-40 minutes
+      automatedResponseRate: (67 + Math.random() * 23).toFixed(2), // 67-90%
+      securityTrainingCompletionRate: (89 + Math.random() * 9).toFixed(2), // 89-98%
+      vendorRiskAssessmentCoverage: (73 + Math.random() * 17).toFixed(2), // 73-90%
+      lastAssessmentDate: new Date(),
+      brand
+    };
+
+    return await this.createZeroTrustKpis(kpiData);
+  }
+
+  // Security Incidents
+  async getSecurityIncidents(brand?: string, status?: string, severity?: string): Promise<SecurityIncident[]> {
+    let query = db.select().from(securityIncidents);
+    
+    const conditions = [];
+    if (brand && brand !== 'all') conditions.push(eq(securityIncidents.brand, brand));
+    if (status) conditions.push(eq(securityIncidents.status, status));
+    if (severity) conditions.push(eq(securityIncidents.severity, severity));
+    
+    if (conditions.length > 0) {
+      query = query.where(conditions.reduce((acc, condition) => acc && condition)) as any;
+    }
+    
+    return await query;
+  }
+
+  async getSecurityIncident(id: number): Promise<SecurityIncident | undefined> {
+    const [incident] = await db.select().from(securityIncidents).where(eq(securityIncidents.id, id));
+    return incident || undefined;
+  }
+
+  async getSecurityIncidentByIncidentId(incidentId: string): Promise<SecurityIncident | undefined> {
+    const [incident] = await db.select().from(securityIncidents).where(eq(securityIncidents.incidentId, incidentId));
+    return incident || undefined;
+  }
+
+  async createSecurityIncident(insertIncident: InsertSecurityIncident): Promise<SecurityIncident> {
+    const [incident] = await db
+      .insert(securityIncidents)
+      .values(insertIncident)
+      .returning();
+    return incident;
+  }
+
+  async updateSecurityIncident(id: number, updateData: Partial<InsertSecurityIncident>): Promise<SecurityIncident> {
+    const [incident] = await db
+      .update(securityIncidents)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(securityIncidents.id, id))
+      .returning();
+    return incident;
+  }
+
+  async deleteSecurityIncident(id: number): Promise<boolean> {
+    const result = await db.delete(securityIncidents).where(eq(securityIncidents.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async acknowledgeSecurityIncident(id: number, acknowledgedBy: string): Promise<boolean> {
+    const [incident] = await db
+      .update(securityIncidents)
+      .set({ 
+        status: 'acknowledged',
+        acknowledgedBy,
+        acknowledgedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(securityIncidents.id, id))
+      .returning();
+    return !!incident;
+  }
+
+  async resolveSecurityIncident(id: number, resolvedBy: string, resolution: string): Promise<boolean> {
+    const [incident] = await db
+      .update(securityIncidents)
+      .set({ 
+        status: 'resolved',
+        resolvedBy,
+        resolution,
+        resolvedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(securityIncidents.id, id))
+      .returning();
+    return !!incident;
   }
 
   // Get holistic business KPIs across all enterprise operations

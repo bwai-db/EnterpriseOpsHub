@@ -932,6 +932,157 @@ export const microsoftLicenseKpis = pgTable("microsoft_license_kpis", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Zero Trust Posture Tables
+export const zeroTrustPolicies = pgTable("zero_trust_policies", {
+  id: serial("id").primaryKey(),
+  policyName: text("policy_name").notNull(),
+  policyType: text("policy_type").notNull(), // conditional_access, device_compliance, app_protection, identity_protection
+  description: text("description"),
+  isEnabled: boolean("is_enabled").default(true),
+  conditions: jsonb("conditions"), // Complex conditions as JSON
+  controls: jsonb("controls"), // Applied controls as JSON
+  assignedUsers: integer("assigned_users").default(0),
+  assignedGroups: integer("assigned_groups").default(0),
+  totalCoverage: integer("total_coverage").default(0), // Total users/devices covered
+  lastModified: timestamp("last_modified").defaultNow(),
+  modifiedBy: text("modified_by"),
+  complianceRate: decimal("compliance_rate", { precision: 5, scale: 2 }), // percentage
+  violationCount: integer("violation_count").default(0),
+  riskScore: decimal("risk_score", { precision: 5, scale: 2 }), // 0-100 risk assessment
+  priority: text("priority").default("medium"), // low, medium, high, critical
+  brand: text("brand").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const conditionalAccessAnalytics = pgTable("conditional_access_analytics", {
+  id: serial("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  policyId: integer("policy_id").references(() => zeroTrustPolicies.id),
+  date: date("date").notNull(),
+  totalSignIns: integer("total_sign_ins").default(0),
+  successfulSignIns: integer("successful_sign_ins").default(0),
+  blockedSignIns: integer("blocked_sign_ins").default(0),
+  failedSignIns: integer("failed_sign_ins").default(0),
+  mfaChallenges: integer("mfa_challenges").default(0),
+  mfaSuccesses: integer("mfa_successes").default(0),
+  mfaFailures: integer("mfa_failures").default(0),
+  deviceComplianceChecks: integer("device_compliance_checks").default(0),
+  compliantDevices: integer("compliant_devices").default(0),
+  nonCompliantDevices: integer("non_compliant_devices").default(0),
+  riskySigns: integer("risky_signs").default(0),
+  highRiskSignIns: integer("high_risk_sign_ins").default(0),
+  mediumRiskSignIns: integer("medium_risk_sign_ins").default(0),
+  lowRiskSignIns: integer("low_risk_sign_ins").default(0),
+  unknownLocations: integer("unknown_locations").default(0),
+  trustedLocations: integer("trusted_locations").default(0),
+  successRate: decimal("success_rate", { precision: 5, scale: 2 }),
+  blockingEffectiveness: decimal("blocking_effectiveness", { precision: 5, scale: 2 }),
+  avgResponseTime: decimal("avg_response_time", { precision: 8, scale: 2 }), // milliseconds
+  brand: text("brand").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const mfaFatigueMetrics = pgTable("mfa_fatigue_metrics", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  userPrincipalName: text("user_principal_name").notNull(),
+  date: date("date").notNull(),
+  dailyMfaChallenges: integer("daily_mfa_challenges").default(0),
+  successfulMfas: integer("successful_mfas").default(0),
+  failedMfas: integer("failed_mfas").default(0),
+  timeoutMfas: integer("timeout_mfas").default(0),
+  consecutiveFailures: integer("consecutive_failures").default(0),
+  avgResponseTime: decimal("avg_response_time", { precision: 8, scale: 2 }), // milliseconds
+  fastestResponse: decimal("fastest_response", { precision: 8, scale: 2 }),
+  slowestResponse: decimal("slowest_response", { precision: 8, scale: 2 }),
+  authMethods: jsonb("auth_methods"), // Track which MFA methods used
+  deviceTypes: jsonb("device_types"), // Track device types used
+  locationChanges: integer("location_changes").default(0),
+  suspiciousActivity: boolean("suspicious_activity").default(false),
+  fatigueScore: decimal("fatigue_score", { precision: 5, scale: 2 }), // 0-100 fatigue assessment
+  riskFactors: text("risk_factors").array(), // Array of identified risk factors
+  recommendations: text("recommendations").array(), // Recommended actions
+  lastMfaTime: timestamp("last_mfa_time"),
+  brand: text("brand").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const zeroTrustKpis = pgTable("zero_trust_kpis", {
+  id: serial("id").primaryKey(),
+  tenantId: text("tenant_id").notNull(),
+  month: integer("month").notNull(), // 1-12
+  year: integer("year").notNull(),
+  overallMaturityScore: decimal("overall_maturity_score", { precision: 5, scale: 2 }), // 0-100
+  identitySecurityScore: decimal("identity_security_score", { precision: 5, scale: 2 }),
+  deviceSecurityScore: decimal("device_security_score", { precision: 5, scale: 2 }),
+  applicationSecurityScore: decimal("application_security_score", { precision: 5, scale: 2 }),
+  dataSecurityScore: decimal("data_security_score", { precision: 5, scale: 2 }),
+  infrastructureSecurityScore: decimal("infrastructure_security_score", { precision: 5, scale: 2 }),
+  networkSecurityScore: decimal("network_security_score", { precision: 5, scale: 2 }),
+  totalUsers: integer("total_users").default(0),
+  mfaEnabledUsers: integer("mfa_enabled_users").default(0),
+  mfaAdoptionRate: decimal("mfa_adoption_rate", { precision: 5, scale: 2 }),
+  averageMfaChallengesPerUser: decimal("avg_mfa_challenges_per_user", { precision: 8, scale: 2 }),
+  mfaFatigueIncidents: integer("mfa_fatigue_incidents").default(0),
+  highRiskUsers: integer("high_risk_users").default(0),
+  compromisedAccounts: integer("compromised_accounts").default(0),
+  conditionalAccessPolicies: integer("conditional_access_policies").default(0),
+  activePolicies: integer("active_policies").default(0),
+  policyViolations: integer("policy_violations").default(0),
+  deviceComplianceRate: decimal("device_compliance_rate", { precision: 5, scale: 2 }),
+  managedDevices: integer("managed_devices").default(0),
+  unmangedDevices: integer("unmanaged_devices").default(0),
+  privilegedAccessUsers: integer("privileged_access_users").default(0),
+  justInTimeRequests: integer("jit_requests").default(0),
+  privilegedAccessViolations: integer("privileged_access_violations").default(0),
+  dataClassificationCoverage: decimal("data_classification_coverage", { precision: 5, scale: 2 }),
+  dlpPolicyHits: integer("dlp_policy_hits").default(0),
+  sensitiveDataExposures: integer("sensitive_data_exposures").default(0),
+  threatDetectionAccuracy: decimal("threat_detection_accuracy", { precision: 5, scale: 2 }),
+  falsePositiveRate: decimal("false_positive_rate", { precision: 5, scale: 2 }),
+  incidentResponseTime: decimal("incident_response_time", { precision: 10, scale: 2 }), // minutes
+  securityAwarenessScore: decimal("security_awareness_score", { precision: 5, scale: 2 }),
+  lastAssessmentDate: timestamp("last_assessment_date"),
+  brand: text("brand").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const securityIncidents = pgTable("security_incidents", {
+  id: serial("id").primaryKey(),
+  incidentId: text("incident_id").notNull().unique(),
+  title: text("title").notNull(),
+  description: text("description"),
+  severity: text("severity").notNull(), // low, medium, high, critical
+  category: text("category").notNull(), // identity, device, data, network, application
+  status: text("status").notNull().default("open"), // open, investigating, resolved, closed
+  affectedUsers: integer("affected_users").default(0),
+  affectedDevices: integer("affected_devices").default(0),
+  affectedAssets: text("affected_assets").array(),
+  detectionMethod: text("detection_method"), // automated, manual, external
+  riskScore: decimal("risk_score", { precision: 5, scale: 2 }),
+  businessImpact: text("business_impact"), // low, medium, high, critical
+  assignedTo: text("assigned_to"),
+  reportedBy: text("reported_by"),
+  detectedAt: timestamp("detected_at"),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  resolvedAt: timestamp("resolved_at"),
+  timeToAcknowledge: integer("time_to_acknowledge"), // minutes
+  timeToResolve: integer("time_to_resolve"), // minutes
+  rootCause: text("root_cause"),
+  remediation: text("remediation"),
+  preventionSteps: text("prevention_steps").array(),
+  lessonsLearned: text("lessons_learned"),
+  relatedPolicies: text("related_policies").array(),
+  complianceImpact: boolean("compliance_impact").default(false),
+  communicationLog: jsonb("communication_log"),
+  attachments: text("attachments").array(),
+  brand: text("brand").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Manufacturing insert schemas
 export const insertManufacturerSchema = createInsertSchema(manufacturers).omit({
   id: true,
@@ -995,6 +1146,35 @@ export const insertUserLicenseAssignmentSchema = createInsertSchema(userLicenseA
 });
 
 export const insertMicrosoftLicenseKpisSchema = createInsertSchema(microsoftLicenseKpis).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Zero Trust insert schemas
+export const insertZeroTrustPolicySchema = createInsertSchema(zeroTrustPolicies).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertConditionalAccessAnalyticsSchema = createInsertSchema(conditionalAccessAnalytics).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertMfaFatigueMetricsSchema = createInsertSchema(mfaFatigueMetrics).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertZeroTrustKpisSchema = createInsertSchema(zeroTrustKpis).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSecurityIncidentSchema = createInsertSchema(securityIncidents).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -1314,6 +1494,22 @@ export type UserLicenseAssignment = typeof userLicenseAssignments.$inferSelect;
 
 export type InsertMicrosoftLicenseKpis = z.infer<typeof insertMicrosoftLicenseKpisSchema>;
 export type MicrosoftLicenseKpis = typeof microsoftLicenseKpis.$inferSelect;
+
+// Zero Trust types
+export type InsertZeroTrustPolicy = z.infer<typeof insertZeroTrustPolicySchema>;
+export type ZeroTrustPolicy = typeof zeroTrustPolicies.$inferSelect;
+
+export type InsertConditionalAccessAnalytics = z.infer<typeof insertConditionalAccessAnalyticsSchema>;
+export type ConditionalAccessAnalytics = typeof conditionalAccessAnalytics.$inferSelect;
+
+export type InsertMfaFatigueMetrics = z.infer<typeof insertMfaFatigueMetricsSchema>;
+export type MfaFatigueMetrics = typeof mfaFatigueMetrics.$inferSelect;
+
+export type InsertZeroTrustKpis = z.infer<typeof insertZeroTrustKpisSchema>;
+export type ZeroTrustKpis = typeof zeroTrustKpis.$inferSelect;
+
+export type InsertSecurityIncident = z.infer<typeof insertSecurityIncidentSchema>;
+export type SecurityIncident = typeof securityIncidents.$inferSelect;
 
 // Enhanced retail types
 export type InsertStoreDisplay = z.infer<typeof insertStoreDisplaySchema>;

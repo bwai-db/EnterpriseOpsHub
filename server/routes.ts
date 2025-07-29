@@ -16,6 +16,8 @@ import {
   insertFacilitySchema, insertFacilityProjectSchema, insertFacilityImprovementSchema, insertFacilityRequestSchema, insertFacilityIncidentSchema,
   insertCorporateLicensePackSchema, insertEntitlementLicenseSchema, insertSpecializedLicenseSchema,
   insertUserLicenseAssignmentSchema, insertMicrosoftLicenseKpisSchema,
+  insertZeroTrustPolicySchema, insertConditionalAccessAnalyticsSchema, insertMfaFatigueMetricsSchema,
+  insertZeroTrustKpisSchema, insertSecurityIncidentSchema,
   insertDocumentCategorySchema, insertDocumentSchema, insertDocumentRevisionSchema,
   insertDocumentFeedbackSchema, insertAiDocumentImprovementSchema, insertDocumentAnalyticsSchema,
   insertBrandSchema, insertBrandOnboardingStepSchema, insertBrandIntegrationSchema
@@ -2115,6 +2117,323 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete Microsoft license KPIs" });
+    }
+  });
+
+  // Zero Trust Security Posture APIs
+
+  // Zero Trust Policies
+  app.get("/api/zero-trust-policies", async (req, res) => {
+    try {
+      const { brand, policyType } = req.query;
+      const policies = await storage.getZeroTrustPolicies(brand as string, policyType as string);
+      res.json(policies);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch Zero Trust policies" });
+    }
+  });
+
+  app.get("/api/zero-trust-policies/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const policy = await storage.getZeroTrustPolicy(id);
+      if (!policy) {
+        return res.status(404).json({ message: "Zero Trust policy not found" });
+      }
+      res.json(policy);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch Zero Trust policy" });
+    }
+  });
+
+  app.post("/api/zero-trust-policies", async (req, res) => {
+    try {
+      const policyData = insertZeroTrustPolicySchema.parse(req.body);
+      const policy = await storage.createZeroTrustPolicy(policyData);
+      res.status(201).json(policy);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid policy data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create Zero Trust policy" });
+    }
+  });
+
+  app.patch("/api/zero-trust-policies/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const policyData = insertZeroTrustPolicySchema.partial().parse(req.body);
+      const policy = await storage.updateZeroTrustPolicy(id, policyData);
+      res.json(policy);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid policy data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update Zero Trust policy" });
+    }
+  });
+
+  app.delete("/api/zero-trust-policies/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteZeroTrustPolicy(id);
+      if (!success) {
+        return res.status(404).json({ message: "Zero Trust policy not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete Zero Trust policy" });
+    }
+  });
+
+  // Conditional Access Analytics
+  app.get("/api/conditional-access-analytics", async (req, res) => {
+    try {
+      const { brand, policyId, startDate, endDate } = req.query;
+      const dateRange = startDate && endDate ? { start: startDate as string, end: endDate as string } : undefined;
+      const analytics = await storage.getConditionalAccessAnalytics(
+        brand as string,
+        policyId ? parseInt(policyId as string) : undefined,
+        dateRange
+      );
+      res.json(analytics);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch conditional access analytics" });
+    }
+  });
+
+  app.post("/api/conditional-access-analytics", async (req, res) => {
+    try {
+      const analyticsData = insertConditionalAccessAnalyticsSchema.parse(req.body);
+      const analytics = await storage.createConditionalAccessAnalytics(analyticsData);
+      res.status(201).json(analytics);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid analytics data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create conditional access analytics" });
+    }
+  });
+
+  // MFA Fatigue Metrics
+  app.get("/api/mfa-fatigue-metrics", async (req, res) => {
+    try {
+      const { brand, userId, startDate, endDate } = req.query;
+      const dateRange = startDate && endDate ? { start: startDate as string, end: endDate as string } : undefined;
+      const metrics = await storage.getMfaFatigueMetrics(
+        brand as string,
+        userId ? parseInt(userId as string) : undefined,
+        dateRange
+      );
+      res.json(metrics);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch MFA fatigue metrics" });
+    }
+  });
+
+  app.post("/api/mfa-fatigue-metrics", async (req, res) => {
+    try {
+      const metricsData = insertMfaFatigueMetricsSchema.parse(req.body);
+      const metrics = await storage.createMfaFatigueMetrics(metricsData);
+      res.status(201).json(metrics);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid metrics data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create MFA fatigue metrics" });
+    }
+  });
+
+  app.get("/api/mfa-fatigue-score/:userId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const score = await storage.calculateMfaFatigueScore(userId);
+      res.json({ userId, fatigueScore: score });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to calculate MFA fatigue score" });
+    }
+  });
+
+  // Zero Trust KPIs
+  app.get("/api/zero-trust-kpis", async (req, res) => {
+    try {
+      const { brand, month, year } = req.query;
+      const kpis = await storage.getZeroTrustKpis(
+        brand as string,
+        month ? parseInt(month as string) : undefined,
+        year ? parseInt(year as string) : undefined
+      );
+      res.json(kpis);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch Zero Trust KPIs" });
+    }
+  });
+
+  app.get("/api/zero-trust-kpis/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const kpi = await storage.getZeroTrustKpi(id);
+      if (!kpi) {
+        return res.status(404).json({ message: "Zero Trust KPI not found" });
+      }
+      res.json(kpi);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch Zero Trust KPI" });
+    }
+  });
+
+  app.post("/api/zero-trust-kpis", async (req, res) => {
+    try {
+      const kpiData = insertZeroTrustKpisSchema.parse(req.body);
+      const kpi = await storage.createZeroTrustKpis(kpiData);
+      res.status(201).json(kpi);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid KPI data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create Zero Trust KPIs" });
+    }
+  });
+
+  app.post("/api/zero-trust-kpis/sync", async (req, res) => {
+    try {
+      const { tenantId, brand } = req.body;
+      const kpi = await storage.syncZeroTrustAssessment(tenantId, brand);
+      res.status(201).json(kpi);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to sync Zero Trust assessment" });
+    }
+  });
+
+  app.patch("/api/zero-trust-kpis/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const kpiData = insertZeroTrustKpisSchema.partial().parse(req.body);
+      const kpi = await storage.updateZeroTrustKpis(id, kpiData);
+      res.json(kpi);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid KPI data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update Zero Trust KPIs" });
+    }
+  });
+
+  app.delete("/api/zero-trust-kpis/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteZeroTrustKpis(id);
+      if (!success) {
+        return res.status(404).json({ message: "Zero Trust KPI not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete Zero Trust KPIs" });
+    }
+  });
+
+  // Security Incidents
+  app.get("/api/security-incidents", async (req, res) => {
+    try {
+      const { brand, status, severity } = req.query;
+      const incidents = await storage.getSecurityIncidents(brand as string, status as string, severity as string);
+      res.json(incidents);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch security incidents" });
+    }
+  });
+
+  app.get("/api/security-incidents/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const incident = await storage.getSecurityIncident(id);
+      if (!incident) {
+        return res.status(404).json({ message: "Security incident not found" });
+      }
+      res.json(incident);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch security incident" });
+    }
+  });
+
+  app.get("/api/security-incidents/by-incident-id/:incidentId", async (req, res) => {
+    try {
+      const incidentId = req.params.incidentId;
+      const incident = await storage.getSecurityIncidentByIncidentId(incidentId);
+      if (!incident) {
+        return res.status(404).json({ message: "Security incident not found" });
+      }
+      res.json(incident);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch security incident" });
+    }
+  });
+
+  app.post("/api/security-incidents", async (req, res) => {
+    try {
+      const incidentData = insertSecurityIncidentSchema.parse(req.body);
+      const incident = await storage.createSecurityIncident(incidentData);
+      res.status(201).json(incident);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid incident data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create security incident" });
+    }
+  });
+
+  app.patch("/api/security-incidents/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const incidentData = insertSecurityIncidentSchema.partial().parse(req.body);
+      const incident = await storage.updateSecurityIncident(id, incidentData);
+      res.json(incident);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid incident data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update security incident" });
+    }
+  });
+
+  app.patch("/api/security-incidents/:id/acknowledge", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { acknowledgedBy } = req.body;
+      const success = await storage.acknowledgeSecurityIncident(id, acknowledgedBy);
+      if (!success) {
+        return res.status(404).json({ message: "Security incident not found" });
+      }
+      res.json({ message: "Security incident acknowledged successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to acknowledge security incident" });
+    }
+  });
+
+  app.patch("/api/security-incidents/:id/resolve", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { resolvedBy, resolution } = req.body;
+      const success = await storage.resolveSecurityIncident(id, resolvedBy, resolution);
+      if (!success) {
+        return res.status(404).json({ message: "Security incident not found" });
+      }
+      res.json({ message: "Security incident resolved successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to resolve security incident" });
+    }
+  });
+
+  app.delete("/api/security-incidents/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteSecurityIncident(id);
+      if (!success) {
+        return res.status(404).json({ message: "Security incident not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete security incident" });
     }
   });
 
