@@ -7,7 +7,7 @@ import {
   insertVendorSchema, insertLicenseSchema, insertIncidentSchema, insertCloudServiceSchema,
   insertCorporateSchema, insertDivisionSchema, insertDepartmentSchema, insertFunctionSchema, insertPersonaSchema, insertUserSchema,
   insertStoreSchema, insertStoreInventorySchema, insertStoreSalesSchema, insertStoreStaffSchema,
-  insertStoreDisplaySchema, insertStoreScheduleSchema, insertKeyholderAssignmentSchema, insertCorporateMessageSchema, insertMessageAcknowledgmentSchema,
+  insertStoreDisplaySchema, insertStoreScheduleSchema, insertKeyholderAssignmentSchema, insertCorporateMessageSchema, insertMessageAcknowledgmentSchema, insertServiceRequestSchema,
   insertServiceCategorySchema, insertItilServiceSchema, insertConfigurationItemSchema,
   insertChangeRequestSchema, insertServiceLevelAgreementSchema,
   insertIntegrationLibrarySchema, insertIntegrationEndpointSchema, insertIntegrationCredentialSchema,
@@ -1091,6 +1091,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid acknowledgment data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to create message acknowledgment" });
+    }
+  });
+
+  // Service Request Routes
+  app.get("/api/service-requests", async (req, res) => {
+    try {
+      const { brand, department, status } = req.query;
+      const serviceRequests = await storage.getServiceRequests(
+        brand as string,
+        department as string,
+        status as string
+      );
+      res.json(serviceRequests);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch service requests" });
+    }
+  });
+
+  app.get("/api/service-requests/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const serviceRequest = await storage.getServiceRequest(id);
+      if (!serviceRequest) {
+        return res.status(404).json({ message: "Service request not found" });
+      }
+      res.json(serviceRequest);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch service request" });
+    }
+  });
+
+  app.post("/api/service-requests", async (req, res) => {
+    try {
+      const requestData = insertServiceRequestSchema.parse(req.body);
+      const serviceRequest = await storage.createServiceRequest(requestData);
+      res.status(201).json(serviceRequest);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid service request data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create service request" });
+    }
+  });
+
+  app.put("/api/service-requests/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const requestData = insertServiceRequestSchema.partial().parse(req.body);
+      const serviceRequest = await storage.updateServiceRequest(id, requestData);
+      res.json(serviceRequest);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid service request data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update service request" });
+    }
+  });
+
+  app.delete("/api/service-requests/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteServiceRequest(id);
+      if (!success) {
+        return res.status(404).json({ message: "Service request not found" });
+      }
+      res.json({ message: "Service request deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete service request" });
     }
   });
 

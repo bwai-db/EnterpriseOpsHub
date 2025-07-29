@@ -519,6 +519,38 @@ export const messageAcknowledgments = pgTable("message_acknowledgments", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Service Request Management
+export const serviceRequests = pgTable("service_requests", {
+  id: serial("id").primaryKey(),
+  ticketNumber: text("ticket_number").notNull().unique(),
+  requestType: text("request_type").notNull(), // incident, service-request, change-request, access-request, etc.
+  department: text("department").notNull(), // it, hr, finance, facilities, security, maintenance
+  priority: text("priority").notNull(), // low, medium, high, critical
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  status: text("status").notNull().default("pending"), // pending, in-progress, resolved, closed, cancelled
+  storeId: integer("store_id").references(() => stores.id),
+  requesterName: text("requester_name").notNull(),
+  requesterEmail: text("requester_email").notNull(),
+  requesterPhone: text("requester_phone"),
+  requesterRole: text("requester_role").notNull(), // retail-associate, store-manager, corporate-operations, etc.
+  assignedTo: text("assigned_to"),
+  assignedDepartment: text("assigned_department"),
+  estimatedResolution: timestamp("estimated_resolution"),
+  actualResolution: timestamp("actual_resolution"),
+  resolutionNotes: text("resolution_notes"),
+  internalNotes: text("internal_notes"),
+  customerFeedback: text("customer_feedback"),
+  satisfactionRating: integer("satisfaction_rating"), // 1-5 scale
+  resolutionTime: integer("resolution_time"), // minutes
+  escalationLevel: integer("escalation_level").default(0), // 0 = not escalated
+  servicenowTicketId: text("servicenow_ticket_id"), // for future ServiceNow integration
+  brand: text("brand").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  resolvedAt: timestamp("resolved_at"),
+});
+
 // ITIL Service Management and CMDB Tables
 export const serviceCategories = pgTable("service_categories", {
   id: serial("id").primaryKey(),
@@ -1375,6 +1407,14 @@ export const insertMessageAcknowledgmentSchema = createInsertSchema(messageAckno
   createdAt: true,
 });
 
+export const insertServiceRequestSchema = createInsertSchema(serviceRequests).omit({
+  id: true,
+  ticketNumber: true,
+  createdAt: true,
+  updatedAt: true,
+  resolvedAt: true,
+});
+
 // Types
 export type InsertCorporate = z.infer<typeof insertCorporateSchema>;
 export type Corporate = typeof corporates.$inferSelect;
@@ -1526,6 +1566,9 @@ export type CorporateMessage = typeof corporateMessages.$inferSelect;
 
 export type InsertMessageAcknowledgment = z.infer<typeof insertMessageAcknowledgmentSchema>;
 export type MessageAcknowledgment = typeof messageAcknowledgments.$inferSelect;
+
+export type InsertServiceRequest = z.infer<typeof insertServiceRequestSchema>;
+export type ServiceRequest = typeof serviceRequests.$inferSelect;
 
 // Shipment Tracking Tables
 export const shipments = pgTable("shipments", {

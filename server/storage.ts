@@ -1,7 +1,7 @@
 import { 
   users, vendors, vendorTeamMembers, vendorAgreements, licenses, incidents, cloudServices,
   corporates, divisions, departments, functions, personas,
-  stores, storeInventory, storeSales, storeStaff, storeDisplays, storeSchedules, keyholderAssignments, corporateMessages, messageAcknowledgments,
+  stores, storeInventory, storeSales, storeStaff, storeDisplays, storeSchedules, keyholderAssignments, corporateMessages, messageAcknowledgments, serviceRequests,
   serviceCategories, itilServices, configurationItems,
   serviceRelationships, ciRelationships, changeRequests, serviceLevelAgreements,
   distributionCenters, distributionCenterMetrics,
@@ -34,6 +34,7 @@ import {
   type KeyholderAssignment, type InsertKeyholderAssignment,
   type CorporateMessage, type InsertCorporateMessage,
   type MessageAcknowledgment, type InsertMessageAcknowledgment,
+  type ServiceRequest, type InsertServiceRequest,
   type ServiceCategory, type InsertServiceCategory,
   type ItilService, type InsertItilService,
   type ConfigurationItem, type InsertConfigurationItem,
@@ -85,7 +86,7 @@ import {
   type BrandIntegration, type InsertBrandIntegration
 } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 
 export interface IStorage {
   // Organizational Structure
@@ -215,6 +216,13 @@ export interface IStorage {
   getMessageAcknowledgment(id: number): Promise<MessageAcknowledgment | undefined>;
   createMessageAcknowledgment(acknowledgment: InsertMessageAcknowledgment): Promise<MessageAcknowledgment>;
   deleteMessageAcknowledgment(id: number): Promise<boolean>;
+
+  // Service Request Management
+  getServiceRequests(brand?: string, department?: string, status?: string): Promise<ServiceRequest[]>;
+  getServiceRequest(id: number): Promise<ServiceRequest | undefined>;
+  createServiceRequest(request: InsertServiceRequest): Promise<ServiceRequest>;
+  updateServiceRequest(id: number, request: Partial<InsertServiceRequest>): Promise<ServiceRequest>;
+  deleteServiceRequest(id: number): Promise<boolean>;
 
   // ITIL Service Management and CMDB
   getServiceCategories(brand?: string): Promise<ServiceCategory[]>;
@@ -1250,6 +1258,64 @@ export class DatabaseStorage implements IStorage {
 
   async deleteMessageAcknowledgment(id: number): Promise<boolean> {
     const result = await db.delete(messageAcknowledgments).where(eq(messageAcknowledgments.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Service Request Management Methods
+  async getServiceRequests(brand?: string, department?: string, status?: string): Promise<ServiceRequest[]> {
+    let query = db.select().from(serviceRequests);
+    const conditions = [];
+    
+    if (brand && brand !== "all") {
+      conditions.push(eq(serviceRequests.brand, brand));
+    }
+    if (department) {
+      conditions.push(eq(serviceRequests.department, department));
+    }
+    if (status) {
+      conditions.push(eq(serviceRequests.status, status));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    return await query.orderBy(desc(serviceRequests.createdAt));
+  }
+
+  async getServiceRequest(id: number): Promise<ServiceRequest | undefined> {
+    const [request] = await db.select().from(serviceRequests).where(eq(serviceRequests.id, id));
+    return request || undefined;
+  }
+
+  async createServiceRequest(insertRequest: InsertServiceRequest): Promise<ServiceRequest> {
+    // Generate ticket number
+    const ticketNumber = `SR-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+    
+    const [request] = await db
+      .insert(serviceRequests)
+      .values({
+        ...insertRequest,
+        ticketNumber,
+      })
+      .returning();
+    return request;
+  }
+
+  async updateServiceRequest(id: number, insertRequest: Partial<InsertServiceRequest>): Promise<ServiceRequest> {
+    const [request] = await db
+      .update(serviceRequests)
+      .set({
+        ...insertRequest,
+        updatedAt: new Date(),
+      })
+      .where(eq(serviceRequests.id, id))
+      .returning();
+    return request;
+  }
+
+  async deleteServiceRequest(id: number): Promise<boolean> {
+    const result = await db.delete(serviceRequests).where(eq(serviceRequests.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
   }
 

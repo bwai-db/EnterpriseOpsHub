@@ -8,8 +8,65 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Store, MapPin, Users, Package, DollarSign, TrendingUp, Clock, Calendar, Key, MessageSquare, Monitor, ArrowLeft, Globe, Settings } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { Store, MapPin, Users, Package, DollarSign, TrendingUp, Clock, Calendar, Key, MessageSquare, Monitor, ArrowLeft, Globe, Settings, HelpCircle, Phone, Wrench, Building, CreditCard, AlertTriangle, CheckCircle, XCircle, Plus } from "lucide-react";
+import * as z from "zod";
 import type { Brand } from "@/lib/types";
+
+// Service Request Schema
+const serviceRequestSchema = z.object({
+  requestType: z.string().min(1, "Request type is required"),
+  department: z.string().min(1, "Department is required"),
+  priority: z.string().min(1, "Priority is required"),
+  title: z.string().min(1, "Title is required"),
+  description: z.string().min(10, "Description must be at least 10 characters"),
+  storeId: z.string().optional(),
+  requesterName: z.string().min(1, "Name is required"),
+  requesterEmail: z.string().email("Valid email is required"),
+  requesterPhone: z.string().optional(),
+  requesterRole: z.string().min(1, "Role is required"),
+});
+
+type ServiceRequestFormData = z.infer<typeof serviceRequestSchema>;
+
+interface ServiceRequest {
+  id: number;
+  ticketNumber: string;
+  requestType: string;
+  department: string;
+  priority: string;
+  title: string;
+  description: string;
+  status: string;
+  persona: string;
+  storeId?: number;
+  requesterName: string;
+  requesterEmail: string;
+  requesterPhone?: string;
+  requesterRole: string;
+  assignedTo?: string;
+  assignedDepartment?: string;
+  estimatedResolution?: string;
+  actualResolution?: string;
+  resolutionNotes?: string;
+  internalNotes?: string;
+  customerFeedback?: string;
+  satisfactionRating?: number;
+  resolutionTime?: number;
+  escalationLevel?: number;
+  createdAt: string;
+  updatedAt?: string;
+  resolvedAt?: string;
+  brand: string;
+}
 
 interface StoreType {
   id: number;
@@ -312,6 +369,10 @@ export default function RetailOperations({ selectedBrand }: RetailOperationsProp
   const [selectedStore, setSelectedStore] = useState<StoreType | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [showServiceRequestDialog, setShowServiceRequestDialog] = useState(false);
+  
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Update time every minute for real-time store status
   useEffect(() => {
@@ -439,6 +500,74 @@ export default function RetailOperations({ selectedBrand }: RetailOperationsProp
     enabled: !!selectedStore
   });
 
+  // Service requests query
+  const { data: serviceRequests = [] } = useQuery({
+    queryKey: ["/api/service-requests", selectedBrand],
+    queryFn: async () => {
+      const params = selectedBrand !== "all" ? `?brand=${selectedBrand}` : "";
+      const res = await fetch(`/api/service-requests${params}`);
+      if (!res.ok) throw new Error("Failed to fetch service requests");
+      return res.json() as Promise<ServiceRequest[]>;
+    }
+  });
+
+  // Service request form
+  const form = useForm<ServiceRequestFormData>({
+    resolver: zodResolver(serviceRequestSchema),
+    defaultValues: {
+      requestType: "",
+      department: "",
+      priority: "",
+      title: "",
+      description: "",
+      storeId: selectedStore?.id?.toString() || "",
+      requesterName: "",
+      requesterEmail: "",
+      requesterPhone: "",
+      requesterRole: "",
+    },
+  });
+
+  // Service request mutation
+  const createServiceRequestMutation = useMutation({
+    mutationFn: async (data: ServiceRequestFormData) => {
+      return apiRequest("/api/service-requests", {
+        method: "POST",
+        body: JSON.stringify({
+          requestType: data.requestType,
+          department: data.department,
+          priority: data.priority,
+          title: data.title,
+          description: data.description,
+          brand: selectedBrand === "all" ? "blorcs" : selectedBrand,
+          storeId: data.storeId ? parseInt(data.storeId) : undefined,
+          requesterName: data.requesterName,
+          requesterEmail: data.requesterEmail,
+          requesterPhone: data.requesterPhone,
+          requesterRole: data.requesterRole,
+          persona: data.requesterRole, // Use requester role as persona
+          category: data.requestType, // Map requestType to category for the database
+        }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/service-requests"] });
+      setShowServiceRequestDialog(false);
+      form.reset();
+      toast({
+        title: "Service Request Submitted",
+        description: "Your request has been submitted successfully and will be processed.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to submit service request. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const getStoresByRegion = () => {
     const regions: { [key: string]: StoreType[] } = {};
     stores.forEach(store => {
@@ -514,12 +643,13 @@ export default function RetailOperations({ selectedBrand }: RetailOperationsProp
 
         {/* Store Management Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="staff">Team ({staff.length})</TabsTrigger>
             <TabsTrigger value="displays">Displays ({displays.length})</TabsTrigger>
             <TabsTrigger value="schedules">Schedules</TabsTrigger>
             <TabsTrigger value="keyholders">Keyholders</TabsTrigger>
+            <TabsTrigger value="service-requests">Service Requests</TabsTrigger>
             <TabsTrigger value="configuration">Configuration</TabsTrigger>
             <TabsTrigger value="messages">Messages</TabsTrigger>
           </TabsList>
@@ -850,6 +980,379 @@ export default function RetailOperations({ selectedBrand }: RetailOperationsProp
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="service-requests" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Service Request Form */}
+              <Card className="lg:col-span-1">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <HelpCircle className="h-5 w-5 mr-2" />
+                    Submit Service Request
+                  </CardTitle>
+                  <CardDescription>
+                    Submit requests for IT, HR, Finance, or Facilities support
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit((data) => createServiceRequestMutation.mutate(data))} className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="requestType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Request Type</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select request type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="incident">Incident Report</SelectItem>
+                                <SelectItem value="service-request">Service Request</SelectItem>
+                                <SelectItem value="change-request">Change Request</SelectItem>
+                                <SelectItem value="access-request">Access Request</SelectItem>
+                                <SelectItem value="hardware-request">Hardware Request</SelectItem>
+                                <SelectItem value="software-request">Software Request</SelectItem>
+                                <SelectItem value="facilities-request">Facilities Request</SelectItem>
+                                <SelectItem value="hr-request">HR Request</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="department"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Department</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select department" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="it">
+                                  <div className="flex items-center">
+                                    <Monitor className="h-4 w-4 mr-2" />
+                                    IT Support
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="hr">
+                                  <div className="flex items-center">
+                                    <Users className="h-4 w-4 mr-2" />
+                                    Human Resources
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="finance">
+                                  <div className="flex items-center">
+                                    <CreditCard className="h-4 w-4 mr-2" />
+                                    Finance
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="facilities">
+                                  <div className="flex items-center">
+                                    <Building className="h-4 w-4 mr-2" />
+                                    Facilities
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="security">
+                                  <div className="flex items-center">
+                                    <Key className="h-4 w-4 mr-2" />
+                                    Security
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="maintenance">
+                                  <div className="flex items-center">
+                                    <Wrench className="h-4 w-4 mr-2" />
+                                    Maintenance
+                                  </div>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="priority"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Priority</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select priority" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="low">
+                                  <div className="flex items-center">
+                                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2" />
+                                    Low
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="medium">
+                                  <div className="flex items-center">
+                                    <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2" />
+                                    Medium
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="high">
+                                  <div className="flex items-center">
+                                    <div className="w-2 h-2 bg-orange-500 rounded-full mr-2" />
+                                    High
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="critical">
+                                  <div className="flex items-center">
+                                    <div className="w-2 h-2 bg-red-500 rounded-full mr-2" />
+                                    Critical
+                                  </div>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="requesterRole"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Your Role</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select your role" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="retail-associate">Retail Associate</SelectItem>
+                                <SelectItem value="shift-supervisor">Shift Supervisor</SelectItem>
+                                <SelectItem value="store-manager">Store Manager</SelectItem>
+                                <SelectItem value="assistant-manager">Assistant Manager</SelectItem>
+                                <SelectItem value="regional-manager">Regional Manager</SelectItem>
+                                <SelectItem value="corporate-operations">Corporate Operations</SelectItem>
+                                <SelectItem value="district-manager">District Manager</SelectItem>
+                                <SelectItem value="area-manager">Area Manager</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="title"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Request Title</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Brief description of your request" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Detailed Description</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                placeholder="Provide detailed information about your request..."
+                                className="min-h-[100px]"
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="requesterName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Your Name</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Full name" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="requesterEmail"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Email</FormLabel>
+                              <FormControl>
+                                <Input type="email" placeholder="your.email@company.com" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <FormField
+                        control={form.control}
+                        name="requesterPhone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Phone (Optional)</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Phone number" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <Button 
+                        type="submit" 
+                        className="w-full"
+                        disabled={createServiceRequestMutation.isPending}
+                      >
+                        {createServiceRequestMutation.isPending ? (
+                          <div className="flex items-center">
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                            Submitting...
+                          </div>
+                        ) : (
+                          <div className="flex items-center">
+                            <Plus className="w-4 h-4 mr-2" />
+                            Submit Request
+                          </div>
+                        )}
+                      </Button>
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
+
+              {/* Service Requests List */}
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Service Requests</CardTitle>
+                      <CardDescription>
+                        Track your service requests and their status
+                      </CardDescription>
+                    </div>
+                    <Badge variant="outline" className="ml-2">
+                      {serviceRequests.length} Total
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {serviceRequests.length > 0 ? (
+                    <div className="space-y-4">
+                      {serviceRequests.slice(0, 10).map((request) => (
+                        <Card key={request.id} className="border-l-4 border-l-blue-500">
+                          <CardHeader className="pb-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <div className="flex items-center space-x-2">
+                                  {request.department === 'it' && <Monitor className="h-4 w-4 text-blue-600" />}
+                                  {request.department === 'hr' && <Users className="h-4 w-4 text-green-600" />}
+                                  {request.department === 'finance' && <CreditCard className="h-4 w-4 text-purple-600" />}
+                                  {request.department === 'facilities' && <Building className="h-4 w-4 text-orange-600" />}
+                                  {request.department === 'security' && <Key className="h-4 w-4 text-red-600" />}
+                                  {request.department === 'maintenance' && <Wrench className="h-4 w-4 text-gray-600" />}
+                                  <div>
+                                    <CardTitle className="text-base">{request.title}</CardTitle>
+                                    <CardDescription className="text-sm">
+                                      {request.ticketNumber} • {request.requesterName}
+                                    </CardDescription>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Badge variant={
+                                  request.priority === 'critical' ? 'destructive' :
+                                  request.priority === 'high' ? 'default' :
+                                  request.priority === 'medium' ? 'secondary' : 'outline'
+                                }>
+                                  {request.priority}
+                                </Badge>
+                                <Badge className={
+                                  request.status === 'resolved' ? 'bg-green-100 text-green-800' :
+                                  request.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
+                                  request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }>
+                                  {request.status === 'in-progress' ? 'In Progress' : 
+                                   request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                                </Badge>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <p className="text-sm text-gray-700 mb-3">{request.description}</p>
+                            <div className="flex items-center justify-between text-sm text-gray-500">
+                              <div className="flex items-center space-x-4">
+                                <span>Department: {request.department.toUpperCase()}</span>
+                                <span>Type: {request.requestType.replace('-', ' ')}</span>
+                                <span>Role: {request.requesterRole.replace('-', ' ')}</span>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Clock className="h-4 w-4" />
+                                <span>{new Date(request.createdAt).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+                            {request.assignedTo && (
+                              <div className="mt-2 flex items-center text-sm text-blue-600">
+                                <Users className="h-4 w-4 mr-1" />
+                                Assigned to: {request.assignedTo}
+                              </div>
+                            )}
+                            {request.estimatedResolution && (
+                              <div className="mt-2 flex items-center text-sm text-green-600">
+                                <Calendar className="h-4 w-4 mr-1" />
+                                Estimated resolution: {new Date(request.estimatedResolution).toLocaleDateString()}
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <HelpCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                      <h3 className="text-lg font-medium text-muted-foreground mb-2">
+                        No Service Requests
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Service requests from associates, managers, and corporate operations will appear here.
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="configuration" className="space-y-6">
