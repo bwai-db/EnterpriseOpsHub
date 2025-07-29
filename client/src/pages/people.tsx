@@ -154,6 +154,25 @@ export default function People({ selectedBrand }: PeopleProps) {
     }
   });
 
+  const seedOrganizationMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/seed/enhanced-organization', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (!response.ok) throw new Error('Failed to seed organizational structure');
+      return response.json();
+    },
+    onSuccess: () => {
+      // Invalidate all organizational data queries to refresh the UI
+      queryClient.invalidateQueries({ queryKey: ['/api/departments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/personas'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/divisions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/corporates'] });
+    }
+  });
+
   const getStatusBadge = (isActive: boolean) => {
     return (
       <Badge variant={isActive ? "default" : "secondary"}>
@@ -185,6 +204,15 @@ export default function People({ selectedBrand }: PeopleProps) {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button 
+            onClick={() => seedOrganizationMutation.mutate()}
+            disabled={seedOrganizationMutation.isPending}
+            variant="outline"
+            className="border-green-600 text-green-600 hover:bg-green-50"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            {seedOrganizationMutation.isPending ? "Seeding..." : "Seed Enhanced Org"}
+          </Button>
           <Button 
             onClick={() => syncEntraMutation.mutate()}
             disabled={syncEntraMutation.isPending}

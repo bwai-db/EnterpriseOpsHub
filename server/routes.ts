@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { seedEnhancedOrganization } from "./simpleSeed";
 import { 
   insertVendorSchema, insertLicenseSchema, insertIncidentSchema, insertCloudServiceSchema,
   insertCorporateSchema, insertDivisionSchema, insertDepartmentSchema, insertFunctionSchema, insertPersonaSchema, insertUserSchema,
@@ -2710,6 +2711,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting brand integration:", error);
       res.status(500).json({ error: "Failed to delete brand integration" });
+    }
+  });
+
+  // Organizational Structure Seeding Routes
+  app.post("/api/seed/enhanced-organization", async (req, res) => {
+    try {
+      console.log("Starting enhanced organizational structure seeding...");
+      const result = await seedEnhancedOrganization();
+      res.json({ 
+        success: true, 
+        message: "Enhanced organizational structure seeded successfully",
+        result,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error seeding enhanced organizational structure:", error);
+      res.status(500).json({ 
+        error: "Failed to seed enhanced organizational structure",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.post("/api/seed/clear-organizational-data", async (req, res) => {
+    try {
+      console.log("Clearing organizational data...");
+      await clearOrganizationalData();
+      res.json({ 
+        success: true, 
+        message: "Organizational data cleared successfully",
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error clearing organizational data:", error);
+      res.status(500).json({ 
+        error: "Failed to clear organizational data",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.post("/api/seed/reset-and-seed", async (req, res) => {
+    try {
+      console.log("Resetting and seeding organizational structure...");
+      await clearOrganizationalData();
+      await seedOrganizationalStructure();
+      res.json({ 
+        success: true, 
+        message: "Organizational structure reset and seeded successfully",
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error resetting and seeding organizational structure:", error);
+      res.status(500).json({ 
+        error: "Failed to reset and seed organizational structure",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 
